@@ -41,3 +41,38 @@ export function drawTile(ctx, tile, offset, w) {
   let x = -(((offset % tile.width) + tile.width) % tile.width);
   for (; x < w; x += tile.width) ctx.drawImage(tile, x, 0);
 }
+
+// Cosy cave interior: warm paper, scribbled rock walls closing in from the edges and a sandy floor.
+export function drawCave(ctx, w, h, floor) {
+  const r = rng(11);
+  ctx.fillStyle = "#f3e6d6";
+  ctx.fillRect(0, 0, w, h);
+  const g = ctx.createRadialGradient(w / 2, h * 0.5, h * 0.3, w / 2, h * 0.5, Math.max(w, h) * 0.75);
+  g.addColorStop(0, "rgba(120,80,90,0)");
+  g.addColorStop(1, "rgba(120,80,90,0.45)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.lineCap = "round";
+  ctx.lineWidth = 2.2;
+  for (let i = 0; i < 220; i++) {
+    const x = r() * w;
+    const y = r() * floor;
+    const edge = Math.min(x, w - x, y) / (w * 0.3);
+    if (r() < edge) continue;
+    ctx.strokeStyle = `rgba(150,90,110,${0.25 + r() * 0.3})`;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (r() - 0.5) * 50, y + 10 + r() * 40);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#ecd6a8";
+  ctx.fillRect(0, floor, w, h - floor);
+  ctx.strokeStyle = "#7a6a58";
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(0, floor);
+  for (let x = 0; x <= w; x += 20) ctx.lineTo(x, floor + (r() - 0.5) * 5);
+  ctx.stroke();
+}
