@@ -66,7 +66,7 @@ const WEEDS = `<path filter="url(#wobble)" stroke="#777" stroke-width="2.2" fill
 // name -> [viewBox, rendered pixel size (2x for crispness), inner markup]
 const SPRITES = {
   mermaid: ["-10 -10 240 130", 480, 260, MERMAID],
-  queen: ["0 0 300 330", 600, 660, `${SHELL}<g transform="translate(34 120) scale(.9)">${MERMAID}</g><g transform="translate(118 92)">${CROWN}</g>`],
+  queen: ["0 0 300 330", 600, 660, `${SHELL}<g transform="translate(26 112) scale(1.15)">${MERMAID}</g><g transform="translate(206 116)">${CROWN}</g>`],
   jellyking: ["-10 -10 120 160", 240, 320, JELLYKING],
   fish: ["-14 -4 90 48", 180, 96, FISH],
   pearl: ["-4 -4 48 48", 96, 96, PEARL],

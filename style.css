@@ -87,3 +87,7 @@ button:focus-visible { box-shadow: 0 0 0 4px #6fa8dc; }
 @media (prefers-reduced-motion: reduce) {
   .queen, .jelly { animation: none; }
 }
+
+@media (max-width: 640px) {
+  .stage .jelly, .stage .fish.two { display: none; }
+}

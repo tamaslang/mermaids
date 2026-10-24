@@ -1,7 +1,7 @@
 import { makeWaterTile, drawTile } from "./paper.js";
 
 export const SPEED = 260;
-export const WORLD_SPEED = 120;
+export const WORLD_SPEED = 220;
 
 export function createState(width, height) {
   return { width, height, x: width * 0.25, y: height / 2, scroll: 0, size: 40 };
@@ -25,7 +25,7 @@ export function step(state, keys, dt) {
   const m = state.size;
   state.x = Math.min(state.width - m, Math.max(m, state.x + (dx / len) * SPEED * dt));
   state.y = Math.min(state.height - m, Math.max(m, state.y + (dy / len) * SPEED * dt));
-  state.scroll += (WORLD_SPEED + (dx > 0 ? SPEED * 0.5 : 0)) * dt;
+  if (dx > 0) state.scroll += WORLD_SPEED * dt;
 }
 
 const KEY_MAP = {

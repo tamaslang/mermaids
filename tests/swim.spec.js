@@ -8,12 +8,23 @@ async function start(page) {
 
 const pos = (page) => page.evaluate(() => ({ x: window.__game.state.x, y: window.__game.state.y, s: window.__game.state.scroll }));
 
-test("world scrolls on its own", async ({ page }) => {
+test("world stays still when the mermaid is not swimming right, and scrolls when she is", async ({ page }) => {
   await start(page);
   const a = await pos(page);
   await page.waitForTimeout(300);
   const b = await pos(page);
-  expect(b.s).toBeGreaterThan(a.s);
+  expect(b.s).toBe(a.s);
+
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(300);
+  await page.keyboard.up("ArrowRight");
+  const c = await pos(page);
+  expect(c.s).toBeGreaterThan(b.s);
+
+  await page.waitForTimeout(100);
+  const d = await pos(page);
+  await page.waitForTimeout(300);
+  expect((await pos(page)).s).toBe(d.s);
 });
 
 test("arrow keys move the mermaid", async ({ page }) => {

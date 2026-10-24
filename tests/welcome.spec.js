@@ -42,3 +42,14 @@ test("ocean canvas is painted", async ({ page }) => {
   });
   expect(painted).toBe(true);
 });
+
+for (const size of [{ width: 1100, height: 640 }, { width: 400, height: 800 }]) {
+  test(`welcome content is horizontally centred at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    for (const sel of ["h1", ".queen", "#start"]) {
+      const box = await page.locator(sel).boundingBox();
+      expect(Math.abs(box.x + box.width / 2 - size.width / 2), sel).toBeLessThan(2);
+    }
+  });
+}
