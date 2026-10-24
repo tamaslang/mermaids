@@ -41,3 +41,17 @@ test("mermaid stays inside the screen", async ({ page }) => {
   const h = await page.evaluate(() => window.__game.state.height);
   expect(p.y).toBeLessThanOrEqual(h);
 });
+
+test("game canvas is painted and the page has no errors", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e));
+  await start(page);
+  await page.waitForTimeout(200);
+  const painted = await page.evaluate(() => {
+    const c = document.getElementById("game-canvas");
+    const d = c.getContext("2d").getImageData(c.width / 2, c.height / 2, 1, 1).data;
+    return d[3] > 0 && d[0] + d[1] + d[2] > 0;
+  });
+  expect(painted).toBe(true);
+  expect(errors).toEqual([]);
+});

@@ -17,3 +17,7 @@ Open http://localhost:4174.
 ## Workflow
 
 All changes go through pull requests; CI (Playwright) must pass.
+
+Testing convention: every feature ships with Playwright tests in the same PR.
+Keep them lean, but the minimum is a happy-path test, and for anything drawn
+on a canvas, a check that the canvas is painted and the page throws no errors.
