@@ -69,39 +69,141 @@ function drawFrame(ctx, img, x, y, fw, tilt) {
   ctx.restore();
 }
 
-function drawTV(ctx, sprites, x, y, tw, t) {
-  const th = tw * 0.75;
+// Deterministic hand-drawn jitter so lines wobble but never flicker between frames.
+const jit = (i, amp) => Math.sin(i * 12.9898) * 43758.5453 % 1 * amp;
+
+function wobblyPath(ctx, pts, close, seed = 0) {
   ctx.beginPath();
-  ctx.moveTo(x - tw * 0.2, y + th / 2 + 14);
-  ctx.lineTo(x - tw * 0.3, y + th / 2 + 26);
-  ctx.moveTo(x + tw * 0.2, y + th / 2 + 14);
-  ctx.lineTo(x + tw * 0.3, y + th / 2 + 26);
-  outline(ctx, null, 3);
-  roundRect(ctx, x - tw / 2, y - th / 2, tw, th + 14, 14);
-  outline(ctx, "#f0a8c0", 3);
-  ctx.save();
-  roundRect(ctx, x - tw / 2 + 9, y - th / 2 + 9, tw - 18, th - 18, 8);
-  ctx.clip();
-  ctx.fillStyle = "#a9d4ee";
-  ctx.fillRect(x - tw / 2, y - th / 2, tw, th);
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  pts.forEach(([px, py], i) => {
+    const x = px + jit(i + seed, 1.6);
+    const y = py + jit(i + seed + 50, 1.6);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  if (close) ctx.closePath();
+}
+
+// A TV shaped like a scallop shell: fanned ribs, a scalloped rim and the screen in the middle.
+function shellOutline(x, bottom, tw, th, steps = 6) {
+  const cy = bottom - th * 0.42;
+  const rx = tw / 2;
+  const ry = th * 0.58;
+  const pts = [[x - tw * 0.13, bottom]];
+  pts.push([x - rx * 0.9, cy + ry * 0.35]);
+  for (let i = 0; i < steps; i++) {
+    for (let j = 0; j <= 4; j++) {
+      const a = Math.PI + ((i + j / 4) / steps) * Math.PI;
+      const bump = 1 + 0.1 * Math.sin((j / 4) * Math.PI);
+      pts.push([x + Math.cos(a) * rx * bump, cy + Math.sin(a) * ry * bump]);
+    }
+  }
+  pts.push([x + rx * 0.9, cy + ry * 0.35]);
+  pts.push([x + tw * 0.13, bottom]);
+  return { pts, cy, rx, ry };
+}
+
+function drawTV(ctx, sprites, x, bottom, tw, t) {
+  const th = tw * 0.85;
+  const { pts, cy, rx, ry } = shellOutline(x, bottom, tw, th);
+
+  wobblyPath(ctx, pts, true, 3);
+  ctx.fillStyle = "#f7c2d0";
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.6;
+  ctx.lineJoin = ctx.lineCap = "round";
+  ctx.stroke();
+  wobblyPath(ctx, pts, true, 9);
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Fan ribs radiating from the hinge
+  ctx.strokeStyle = "#c0687f";
   ctx.lineWidth = 2;
-  for (let i = 0; i < 4; i++) {
-    ctx.beginPath();
-    const yy = y - th / 2 + 16 + i * (th / 5);
-    ctx.moveTo(x - tw / 2, yy);
-    for (let xx = 0; xx <= tw; xx += 10) ctx.lineTo(x - tw / 2 + xx, yy + Math.sin(xx / 12 + t / 400 + i) * 3);
+  for (let i = 1; i < 6; i++) {
+    const a = Math.PI + (i / 6) * Math.PI;
+    wobblyPath(ctx, [[x, bottom], [x + Math.cos(a) * rx * 1.05, cy + Math.sin(a) * ry * 1.05]], false, i * 5);
     ctx.stroke();
   }
-  // A little fish "show" looping across the screen
-  const fw = tw * 0.3;
-  const prog = ((t / 3500) % 1.6) - 0.3;
-  const img = sprites.fish2;
-  ctx.drawImage(img, x - tw / 2 + prog * tw, y + Math.sin(t / 500) * th * 0.12 - fw * 0.25, fw, fw * (img.height / img.width));
+
+  // Screen
+  const sx = x;
+  const sy = cy - ry * 0.05;
+  const srx = rx * 0.62;
+  const sry = ry * 0.62;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(sx, sy, srx, sry, 0, 0, Math.PI * 2);
+  ctx.clip();
+  // Sunset: banded crayon sky, a low sun, glittering sea and birds flapping across
+  const top = sy - sry;
+  const horizon = sy + sry * 0.3;
+  const sky = ctx.createLinearGradient(0, top, 0, horizon);
+  sky.addColorStop(0, "#7a5fb0");
+  sky.addColorStop(0.45, "#f08aa8");
+  sky.addColorStop(0.8, "#ffb35a");
+  sky.addColorStop(1, "#ffe08a");
+  ctx.fillStyle = sky;
+  ctx.fillRect(sx - srx, top, srx * 2, horizon - top);
+  const sunR = sry * 0.32;
+  const glow = ctx.createRadialGradient(sx, horizon, sunR * 0.5, sx, horizon, sunR * 2.6);
+  glow.addColorStop(0, "rgba(255,240,170,0.8)");
+  glow.addColorStop(1, "rgba(255,200,120,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(sx - srx, top, srx * 2, horizon - top + 4);
+  ctx.beginPath();
+  ctx.arc(sx, horizon, sunR, Math.PI, 0);
+  ctx.fillStyle = "#ffd24a";
+  ctx.fill();
+  ctx.strokeStyle = "#e0822a";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.fillStyle = "#3f5f9a";
+  ctx.fillRect(sx - srx, horizon, srx * 2, sy + sry - horizon);
+  ctx.strokeStyle = "rgba(255,210,120,0.85)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const yy = horizon + 6 + i * (sry * 0.17);
+    const len = sunR * (1.6 - i * 0.28);
+    ctx.beginPath();
+    ctx.moveTo(sx - len + Math.sin(t / 500 + i) * 4, yy);
+    ctx.lineTo(sx + len + Math.sin(t / 500 + i) * 4, yy);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#3a2a4a";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  [0, 1, 2].forEach((i) => {
+    const prog = (((t / 6000 + i * 0.33) % 1.4) - 0.2);
+    const bx = sx - srx + prog * srx * 2;
+    const by = top + sry * (0.45 + i * 0.18) + Math.sin(t / 900 + i * 2) * 5;
+    const bs = sry * (0.12 - i * 0.015);
+    const flap = Math.sin(t / 130 + i * 1.7) * bs * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(bx - bs, by - flap);
+    ctx.quadraticCurveTo(bx - bs * 0.4, by - bs * 0.5 - flap * 0.5, bx, by);
+    ctx.quadraticCurveTo(bx + bs * 0.4, by - bs * 0.5 - flap * 0.5, bx + bs, by - flap);
+    ctx.stroke();
+  });
   ctx.restore();
   ctx.beginPath();
-  ctx.arc(x + tw / 2 - 10, y + th / 2 + 7, 3, 0, Math.PI * 2);
-  outline(ctx, "#f4f4f4", 1.6);
+  ctx.ellipse(sx, sy, srx, sry, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+// Low side table for the TV
+function drawTVTable(ctx, x, floor, tw, th) {
+  const top = floor - th;
+  for (const dir of [-1, 1]) {
+    wobblyPath(ctx, [[x + dir * tw * 0.4, top + 6], [x + dir * tw * 0.46, floor - th * 0.4], [x + dir * tw * 0.42, floor], [x + dir * tw * 0.32, floor], [x + dir * tw * 0.33, top + 6]], true, dir + 20);
+    outline(ctx, "#f3a6b8");
+  }
+  roundRect(ctx, x - tw / 2, top, tw, 12, 6);
+  outline(ctx, "#e8c89a", 2.6);
 }
 
 function drawTable(ctx, x, floor, tw, th, t) {
@@ -168,6 +270,9 @@ export function drawFurniture(ctx, w, h, floor, sprites, t, drawOutside) {
   drawFrame(ctx, sprites.jellyking, w * 0.2, h * 0.32, fw * 0.95, 0.04);
   drawFrame(ctx, sprites.fish, w * 0.15, h * 0.46, fw * 0.7, 0.03);
 
-  drawTV(ctx, sprites, w * 0.82, h * 0.3, Math.min(170, w * 0.17), t);
+  const tvW = Math.min(170, w * 0.17);
+  const tvTableH = h * 0.13;
+  drawTVTable(ctx, w * 0.9, floor, tvW * 0.8, tvTableH);
+  drawTV(ctx, sprites, w * 0.9, floor - tvTableH, tvW, t);
   drawTable(ctx, w * 0.5, floor, Math.min(150, w * 0.16), h * 0.17, t);
 }
