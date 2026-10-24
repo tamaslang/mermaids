@@ -63,6 +63,43 @@ const CORAL = `<g filter="url(#wobble)" stroke="#8a2a55" stroke-width="2" stroke
 const WEEDS = `<path filter="url(#wobble)" stroke="#777" stroke-width="2.2" fill="none" stroke-linecap="round"
   d="M10 90 L18 20 L26 90 M40 90 L48 8 L56 90 M72 90 L78 30 L88 90 M104 90 L112 14 L120 90 M140 90 L146 36 L156 90 M176 90 L184 10 L194 90 M214 90 L220 40 L230 90 M250 90 L258 16 L266 90 M290 90 L296 34 L306 90 M330 90 L338 12 L348 90 M370 90 L376 38 L386 90"/>`;
 
+const REEF = `<g filter="url(#wobble)" stroke="#8a2a55" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M10 300 Q0 190 40 150 Q36 100 76 96 Q80 50 124 62 Q150 14 196 40 Q236 6 278 44 Q330 30 340 90 Q392 100 384 160 Q420 210 410 300Z" fill="#f08aa8" fill-opacity=".85" filter="url(#crayon)"/>
+  <path d="M10 300 Q0 190 40 150 Q36 100 76 96 Q80 50 124 62 Q150 14 196 40 Q236 6 278 44 Q330 30 340 90 Q392 100 384 160 Q420 210 410 300" fill="none"/>
+  <path d="M120 300 L120 190 Q120 120 210 120 Q300 120 300 190 L300 300Z" fill="#4a3a4a" fill-opacity=".85"/>
+  <path d="M120 300 L120 190 Q120 120 210 120 Q300 120 300 190 L300 300" fill="none"/>
+  <path d="M60 140 Q90 120 110 150 M310 150 Q340 118 364 144 M150 80 Q170 54 196 80 M240 76 Q262 48 290 78" fill="none" stroke="#c4235f"/>
+  <path d="M60 240 L36 216 L62 210Z M356 230 L384 204 L360 198Z M92 120 L66 96 L96 90Z" fill="#f3a6b8"/>
+  <circle cx="128" cy="150" r="9" fill="#f4f4f4" stroke="#555"/><circle cx="160" cy="132" r="9" fill="#f4f4f4" stroke="#555"/>
+  <circle cx="210" cy="124" r="9" fill="#f4f4f4" stroke="#555"/><circle cx="260" cy="132" r="9" fill="#f4f4f4" stroke="#555"/>
+  <circle cx="292" cy="150" r="9" fill="#f4f4f4" stroke="#555"/>
+</g>`;
+
+const SOFA = `<g filter="url(#wobble)" stroke="#8a4a6a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M10 100 Q0 30 100 6 Q200 30 190 100Z" fill="#f7c2d0" fill-opacity=".9" filter="url(#crayon)"/>
+  <path d="M10 100 Q0 30 100 6 Q200 30 190 100Z" fill="none"/>
+  <path d="M100 100 L100 12 M60 100 L40 28 M140 100 L160 28 M30 100 L16 52 M170 100 L184 52" fill="none" stroke-width="1.8"/>
+  <path d="M14 76 Q4 76 4 92 Q4 112 24 112 L176 112 Q196 112 196 92 Q196 76 186 76 Q170 70 100 70 Q30 70 14 76Z" fill="#b9a0e0" fill-opacity=".9" filter="url(#crayon)"/>
+  <path d="M14 76 Q4 76 4 92 Q4 112 24 112 L176 112 Q196 112 196 92 Q196 76 186 76 Q170 70 100 70 Q30 70 14 76Z" fill="none"/>
+  <circle cx="22" cy="56" r="8" fill="#f4f4f4" stroke="#555"/><circle cx="178" cy="56" r="8" fill="#f4f4f4" stroke="#555"/>
+  <circle cx="100" cy="22" r="8" fill="#f4f4f4" stroke="#555"/><circle cx="50" cy="106" r="5" fill="#f4f4f4" stroke="#555"/><circle cx="150" cy="106" r="5" fill="#f4f4f4" stroke="#555"/>
+</g>`;
+
+const MERMAID_SIT = `<g filter="url(#wobble)" stroke="#444" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M96 128 Q150 140 160 104 Q164 84 156 70 Q184 66 188 40 Q166 50 148 58 Q146 84 138 100 Q120 110 96 108Z" fill="#e8d84a" filter="url(#crayon)"/>
+  <path d="M96 128 Q150 140 160 104 Q164 84 156 70" fill="none"/>
+  <path d="M156 70 Q184 66 188 40 Q166 50 148 58Z" fill="#5f9a9a" fill-opacity=".8"/>
+  <path d="M112 118 q20 8 38 -4 M118 108 q18 6 30 -4" fill="none" stroke="#c98a2b" stroke-width="2"/>
+  <path d="M80 62 Q70 100 84 128 L106 124 Q112 96 108 62Z" fill="#f6e2c9"/>
+  <path d="M82 70 Q66 100 76 130 L90 130 Q84 100 98 72Z" fill="#8a5fb0" fill-opacity=".85"/>
+  <path d="M96 66 Q124 76 132 96" fill="none"/>
+  <path d="M74 30 Q58 60 62 108 Q76 112 84 90 Q82 60 96 40Z" fill="#d93a2e" fill-opacity=".9"/>
+  <circle cx="96" cy="40" r="19" fill="#f6e2c9"/>
+  <path d="M78 38 Q84 18 104 20 Q116 24 115 40 Q98 30 78 38Z" fill="#d93a2e" fill-opacity=".9"/>
+  <circle cx="104" cy="38" r="2.4" fill="#222" stroke="none"/>
+  <path d="M102 50 Q108 54 114 49" fill="none" stroke="#c0392b"/>
+</g>`;
+
 // name -> [viewBox, rendered pixel size (2x for crispness), inner markup]
 const SPRITES = {
   mermaid: ["-10 -10 240 130", 480, 260, MERMAID],
@@ -72,6 +109,9 @@ const SPRITES = {
   pearl: ["-4 -4 48 48", 96, 96, PEARL],
   coral: ["-4 0 88 304", 176, 608, CORAL],
   weeds: ["0 0 400 100", 800, 200, WEEDS],
+  reef: ["-4 0 428 304", 856, 608, REEF],
+  sofa: ["-4 0 208 120", 416, 240, SOFA],
+  mermaidSit: ["40 0 160 150", 320, 300, MERMAID_SIT],
 };
 
 export function spriteUrl(name) {
