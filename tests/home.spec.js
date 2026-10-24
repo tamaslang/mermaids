@@ -64,3 +64,25 @@ test("enter the home, sit on a sofa, stand up and leave", async ({ page }) => {
   expect(out.scroll).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
+
+test("the furnished home shows the outside creatures through the window", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await start(page);
+  await nearHome(page);
+  await page.keyboard.press("Enter");
+  const x0 = await page.evaluate(() => window.__game.critters.map((c) => c.x));
+  await page.waitForTimeout(600);
+  const x1 = await page.evaluate(() => window.__game.critters.map((c) => c.x));
+  expect(x1.some((x, i) => x !== x0[i])).toBe(true);
+
+  // The window area (above the table, centred) is painted with the outside scene
+  const painted = await page.locator("#game-canvas").evaluate((c) => {
+    const d = c.getContext("2d").getImageData(c.width * 0.45, c.height * 0.2, c.width * 0.1, c.height * 0.15).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 2] > d[i] + 15) n++;
+    return n;
+  });
+  expect(painted).toBeGreaterThan(20);
+  expect(errors).toEqual([]);
+});
