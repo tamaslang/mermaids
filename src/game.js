@@ -3,8 +3,34 @@ import { makeWaterTile, drawTile } from "./paper.js";
 export const SPEED = 260;
 export const WORLD_SPEED = 220;
 
+const ACCEL = 8;
+const TURN_RATE = 12;
+
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, scroll: 0, size: 40 };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, scroll: 0, size: 40 };
+}
+
+// Pure update: `keys` is a Set of normalised direction names.
+// Velocity eases toward the target so swimming starts and stops smoothly.
+export function step(state, keys, dt) {
+  const dx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
+  const dy = (keys.has("down") ? 1 : 0) - (keys.has("up") ? 1 : 0);
+  const len = Math.hypot(dx, dy) || 1;
+  const ease = Math.min(1, ACCEL * dt);
+  state.vx += ((dx / len) * SPEED - state.vx) * ease;
+  state.vy += ((dy / len) * SPEED - state.vy) * ease;
+  if (!dx && Math.abs(state.vx) < 1) state.vx = 0;
+  if (!dy && Math.abs(state.vy) < 1) state.vy = 0;
+
+  const m = state.size;
+  state.x = Math.min(state.width - m, Math.max(m, state.x + state.vx * dt));
+  state.y = Math.min(state.height - m, Math.max(m, state.y + state.vy * dt));
+
+  if (dx) state.facing = dx;
+  state.turn += (state.facing - state.turn) * Math.min(1, TURN_RATE * dt);
+  if (Math.abs(state.facing - state.turn) < 0.01) state.turn = state.facing;
+
+  if (state.vx > 0) state.scroll += (state.vx / SPEED) * WORLD_SPEED * dt;
 }
 
 // Keep the mermaid at the same relative spot when the screen size changes.
@@ -16,17 +42,6 @@ export function resizeState(state, width, height) {
 }
 
 export const spriteWidth = (h) => Math.min(280, Math.max(120, h * 0.3));
-
-// Pure update: `keys` is a Set of normalised direction names.
-export function step(state, keys, dt) {
-  const dx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
-  const dy = (keys.has("down") ? 1 : 0) - (keys.has("up") ? 1 : 0);
-  const len = Math.hypot(dx, dy) || 1;
-  const m = state.size;
-  state.x = Math.min(state.width - m, Math.max(m, state.x + (dx / len) * SPEED * dt));
-  state.y = Math.min(state.height - m, Math.max(m, state.y + (dy / len) * SPEED * dt));
-  if (dx > 0) state.scroll += WORLD_SPEED * dt;
-}
 
 const KEY_MAP = {
   ArrowLeft: "left", a: "left", A: "left",
@@ -82,7 +97,12 @@ export function startGame(canvas, sprites) {
     const bob = Math.sin(state.scroll / 40) * 3;
     const sw = spriteWidth(h);
     const sh = sw * (sprites.mermaid.height / sprites.mermaid.width);
-    ctx.drawImage(sprites.mermaid, state.x - sw / 2, state.y - sh / 2 + bob, sw, sh);
+    ctx.save();
+    ctx.translate(state.x, state.y + bob);
+    ctx.scale(state.turn, 1);
+    ctx.rotate((state.vy / SPEED) * 0.35);
+    ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
+    ctx.restore();
   }
 
   function frame(now) {

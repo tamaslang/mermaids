@@ -6,7 +6,7 @@ async function start(page) {
   await expect(page.locator("#game-canvas")).toBeVisible();
 }
 
-const pos = (page) => page.evaluate(() => ({ x: window.__game.state.x, y: window.__game.state.y, s: window.__game.state.scroll }));
+const pos = (page) => page.evaluate(() => ({ x: window.__game.state.x, y: window.__game.state.y, s: window.__game.state.scroll, facing: window.__game.state.facing, turn: window.__game.state.turn }));
 
 test("world stays still when the mermaid is not swimming right, and scrolls when she is", async ({ page }) => {
   await start(page);
@@ -21,7 +21,7 @@ test("world stays still when the mermaid is not swimming right, and scrolls when
   const c = await pos(page);
   expect(c.s).toBeGreaterThan(b.s);
 
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(1200);
   const d = await pos(page);
   await page.waitForTimeout(300);
   expect((await pos(page)).s).toBe(d.s);
@@ -96,4 +96,36 @@ test("mermaid is drawn on screen at start and after a resize", async ({ page }) 
   v = await visible();
   expect(v.inside).toBe(true);
   expect(v.colourful).toBeGreaterThan(20);
+});
+
+test("mermaid turns around when swimming left and back when swimming right", async ({ page }) => {
+  await start(page);
+  expect((await pos(page)).turn).toBe(1);
+
+  await page.keyboard.down("ArrowLeft");
+  await page.waitForTimeout(500);
+  const left = await pos(page);
+  expect(left.facing).toBe(-1);
+  expect(left.turn).toBe(-1);
+  expect(left.x).toBeLessThan(await page.evaluate(() => window.__game.state.width * 0.25));
+  await page.keyboard.up("ArrowLeft");
+
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(500);
+  await page.keyboard.up("ArrowRight");
+  expect((await pos(page)).turn).toBe(1);
+});
+
+test("movement eases in and out instead of jumping", async ({ page }) => {
+  await start(page);
+  await page.keyboard.down("ArrowDown");
+  await page.waitForTimeout(60);
+  const early = await page.evaluate(() => window.__game.state.vy);
+  await page.waitForTimeout(600);
+  const cruising = await page.evaluate(() => window.__game.state.vy);
+  await page.keyboard.up("ArrowDown");
+  expect(early).toBeGreaterThan(0);
+  expect(early).toBeLessThan(cruising * 0.8);
+  await page.waitForTimeout(50);
+  expect(await page.evaluate(() => window.__game.state.vy)).toBeGreaterThan(0);
 });
