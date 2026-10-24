@@ -20,9 +20,46 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Deterministic hand-drawn jitter so lines wobble but never flicker between frames.
+const jit = (i, amp) => Math.sin(i * 12.9898) * 43758.5453 % 1 * amp;
+
+function wobblyPath(ctx, pts, close, seed = 0) {
+  ctx.beginPath();
+  pts.forEach(([px, py], i) => {
+    const x = px + jit(i + seed, 1.6);
+    const y = py + jit(i + seed + 50, 1.6);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  if (close) ctx.closePath();
+}
+
 export function windowRect(w, h) {
   const ww = Math.min(300, w * 0.24);
   return { x: w * 0.5 - ww / 2, y: h * 0.14, w: ww, h: ww * 0.9 };
+}
+
+// Slightly lopsided rounded window outline, sampled as points so every line can wobble like a pencil.
+function windowPts(r, grow = 0, seed = 0) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const pts = [];
+  const N = 56;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    const px = Math.sign(c) * Math.pow(Math.abs(c), 0.45) * (r.w / 2 + grow);
+    const py = Math.sign(sn) * Math.pow(Math.abs(sn), 0.45) * (r.h / 2 + grow);
+    pts.push([cx + px + jit(i + seed, 2.4), cy + py + jit(i + seed + 70, 2.4)]);
+  }
+  return pts;
+}
+
+function tracePts(ctx, pts) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
 }
 
 // `drawOutside` paints the sea as seen from the doorstep; it is clipped and scaled into the window.
@@ -30,27 +67,65 @@ function drawWindow(ctx, w, h, drawOutside) {
   const r = windowRect(w, h);
   const k = 0.65;
   ctx.save();
-  roundRect(ctx, r.x, r.y, r.w, r.h, r.w * 0.18);
+  tracePts(ctx, windowPts(r));
   ctx.clip();
   ctx.translate(r.x - w * 0.3 * k, r.y - h * 0.4 * k);
   ctx.scale(k, k);
   drawOutside(ctx);
   ctx.restore();
 
-  roundRect(ctx, r.x, r.y, r.w, r.h, r.w * 0.18);
-  outline(ctx, null, 7);
-  ctx.strokeStyle = "#c98a6a";
-  ctx.lineWidth = 5;
+  // Crayon-scribbled wooden frame: a thick band of short strokes between two wobbly pencil outlines
+  const outer = windowPts(r, 9, 11);
+  const inner = windowPts(r, -1, 23);
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(201,138,106,0.9)";
+  ctx.lineWidth = 3.4;
+  outer.forEach(([ox, oy], i) => {
+    const [ix, iy] = inner[i];
+    for (let j = 0; j < 3; j++) {
+      const f = 0.1 + j * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(ox + (ix - ox) * f, oy + (iy - oy) * f);
+      ctx.lineTo(ox + (ix - ox) * (f + 0.4), oy + (iy - oy) * (f + 0.4));
+      ctx.stroke();
+    }
+  });
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.6;
+  tracePts(ctx, outer);
   ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(r.x + r.w / 2, r.y + 4);
-  ctx.lineTo(r.x + r.w / 2, r.y + r.h - 4);
-  ctx.moveTo(r.x + 4, r.y + r.h / 2);
-  ctx.lineTo(r.x + r.w - 4, r.y + r.h / 2);
-  outline(ctx, null, 4);
-  ctx.strokeStyle = "#c98a6a";
+  ctx.lineWidth = 2;
+  tracePts(ctx, inner);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  tracePts(ctx, windowPts(r, 10.5, 41));
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Hand-ruled cross bars, drawn twice so they look sketched
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
   ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(201,138,106,0.95)";
+  for (const o of [0, 1.6]) {
+    wobblyPath(ctx, [[cx + o, r.y + 4], [cx - o, cy], [cx + o, r.y + r.h - 4]], false, 31 + o);
+    ctx.stroke();
+    wobblyPath(ctx, [[r.x + 4, cy + o], [cx, cy - o], [r.x + r.w - 4, cy + o]], false, 37 + o);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.4;
+  wobblyPath(ctx, [[cx, r.y + 4], [cx, r.y + r.h - 4]], false, 44);
   ctx.stroke();
+  wobblyPath(ctx, [[r.x + 4, cy], [r.x + r.w - 4, cy]], false, 47);
+  ctx.stroke();
+
+  // Sill
+  wobblyPath(ctx, [[r.x - 12, r.y + r.h + 14], [r.x + r.w + 12, r.y + r.h + 14], [r.x + r.w + 8, r.y + r.h + 4], [r.x - 8, r.y + r.h + 4]], true, 53);
+  outline(ctx, "#e8c89a", 2.4);
+  ctx.restore();
 }
 
 function drawFrame(ctx, img, x, y, fw, tilt) {
@@ -67,20 +142,6 @@ function drawFrame(ctx, img, x, y, fw, tilt) {
   const iw2 = ih * (img.width / img.height);
   ctx.drawImage(img, -iw2 / 2, -ih / 2, iw2, ih);
   ctx.restore();
-}
-
-// Deterministic hand-drawn jitter so lines wobble but never flicker between frames.
-const jit = (i, amp) => Math.sin(i * 12.9898) * 43758.5453 % 1 * amp;
-
-function wobblyPath(ctx, pts, close, seed = 0) {
-  ctx.beginPath();
-  pts.forEach(([px, py], i) => {
-    const x = px + jit(i + seed, 1.6);
-    const y = py + jit(i + seed + 50, 1.6);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  if (close) ctx.closePath();
 }
 
 // A TV shaped like a scallop shell: fanned ribs, a scalloped rim and the screen in the middle.
@@ -137,42 +198,70 @@ function drawTV(ctx, sprites, x, bottom, tw, t) {
   ctx.beginPath();
   ctx.ellipse(sx, sy, srx, sry, 0, 0, Math.PI * 2);
   ctx.clip();
-  // Sunset: banded crayon sky, a low sun, glittering sea and birds flapping across
+  // Sunset drawn like the rest of the game: crayon scribbles on paper with pencil outlines
   const top = sy - sry;
   const horizon = sy + sry * 0.3;
-  const sky = ctx.createLinearGradient(0, top, 0, horizon);
-  sky.addColorStop(0, "#7a5fb0");
-  sky.addColorStop(0.45, "#f08aa8");
-  sky.addColorStop(0.8, "#ffb35a");
-  sky.addColorStop(1, "#ffe08a");
-  ctx.fillStyle = sky;
-  ctx.fillRect(sx - srx, top, srx * 2, horizon - top);
+  ctx.fillStyle = "#f8f3e6";
+  ctx.fillRect(sx - srx, top, srx * 2, sry * 2);
+  let seed = 5;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  ctx.lineCap = "round";
+  const scribble = (y0, y1, color, count, slant) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3.2;
+    for (let i = 0; i < count; i++) {
+      const px = sx - srx + rnd() * srx * 2;
+      const py = y0 + rnd() * (y1 - y0);
+      const len = 8 + rnd() * 10;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + len * slant, py + (rnd() - 0.5) * 4);
+      ctx.stroke();
+    }
+  };
+  const bandH = (horizon - top) / 4;
+  scribble(top, top + bandH * 1.2, "rgba(140,100,190,0.85)", 70, 1);
+  scribble(top + bandH * 0.9, top + bandH * 2.2, "rgba(236,110,150,0.85)", 80, 1);
+  scribble(top + bandH * 1.9, top + bandH * 3.2, "rgba(255,150,70,0.9)", 80, 1);
+  scribble(top + bandH * 2.9, horizon, "rgba(255,210,90,0.9)", 70, 1);
+  scribble(horizon, sy + sry, "rgba(80,120,190,0.85)", 110, 1);
+
   const sunR = sry * 0.32;
-  const glow = ctx.createRadialGradient(sx, horizon, sunR * 0.5, sx, horizon, sunR * 2.6);
-  glow.addColorStop(0, "rgba(255,240,170,0.8)");
-  glow.addColorStop(1, "rgba(255,200,120,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(sx - srx, top, srx * 2, horizon - top + 4);
   ctx.beginPath();
   ctx.arc(sx, horizon, sunR, Math.PI, 0);
-  ctx.fillStyle = "#ffd24a";
+  ctx.closePath();
+  ctx.fillStyle = "#f8f3e6";
   ctx.fill();
-  ctx.strokeStyle = "#e0822a";
-  ctx.lineWidth = 1.6;
-  ctx.stroke();
-  ctx.fillStyle = "#3f5f9a";
-  ctx.fillRect(sx - srx, horizon, srx * 2, sy + sry - horizon);
-  ctx.strokeStyle = "rgba(255,210,120,0.85)";
+  scribble(horizon - sunR, horizon, "rgba(255,196,40,0.95)", 40, 0.2);
+  ctx.strokeStyle = "#8a5a2a";
   ctx.lineWidth = 2;
-  for (let i = 0; i < 4; i++) {
-    const yy = horizon + 6 + i * (sry * 0.17);
-    const len = sunR * (1.6 - i * 0.28);
+  ctx.beginPath();
+  ctx.arc(sx, horizon, sunR, Math.PI, 0);
+  ctx.stroke();
+  for (let i = 0; i < 7; i++) {
+    const a = Math.PI + ((i + 0.5) / 7) * Math.PI;
     ctx.beginPath();
-    ctx.moveTo(sx - len + Math.sin(t / 500 + i) * 4, yy);
-    ctx.lineTo(sx + len + Math.sin(t / 500 + i) * 4, yy);
+    ctx.moveTo(sx + Math.cos(a) * sunR * 1.25, horizon + Math.sin(a) * sunR * 1.25);
+    ctx.lineTo(sx + Math.cos(a) * sunR * 1.6, horizon + Math.sin(a) * sunR * 1.6);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#3a2a4a";
+  ctx.strokeStyle = "#555";
+  ctx.beginPath();
+  ctx.moveTo(sx - srx, horizon);
+  for (let xx = 0; xx <= srx * 2; xx += 12) ctx.lineTo(sx - srx + xx, horizon + Math.sin(xx) * 0.8);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,225,140,0.95)";
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 4; i++) {
+    const yy = horizon + 8 + i * (sry * 0.16);
+    const len = sunR * (1.4 - i * 0.28);
+    const dx = Math.sin(t / 500 + i) * 4;
+    ctx.beginPath();
+    ctx.moveTo(sx - len + dx, yy);
+    ctx.lineTo(sx + len + dx, yy);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#444";
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
   [0, 1, 2].forEach((i) => {
