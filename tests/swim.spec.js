@@ -158,3 +158,12 @@ test("movement eases in and out instead of jumping", async ({ page }) => {
   await page.waitForTimeout(50);
   expect(await page.evaluate(() => window.__game.state.vy)).toBeGreaterThan(0);
 });
+
+test("bubbles rise in the game", async ({ page }) => {
+  await start(page);
+  const y0 = await page.evaluate(() => window.__game.bubbles.map((b) => b.y));
+  expect(y0.length).toBeGreaterThan(10);
+  await page.waitForTimeout(500);
+  const y1 = await page.evaluate(() => window.__game.bubbles.map((b) => b.y));
+  expect(y1.filter((y, i) => y < y0[i]).length).toBeGreaterThan(10);
+});

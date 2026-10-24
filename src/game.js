@@ -155,6 +155,27 @@ export function startGame(canvas, sprites) {
   window.addEventListener("keydown", onDown);
   window.addEventListener("keyup", onUp);
 
+  const bubbles = Array.from({ length: 28 }, () => ({
+    x: Math.random(), y: Math.random(), r: 3 + Math.random() * 8, speed: 0.04 + Math.random() * 0.06, depth: 0.3 + Math.random() * 0.5,
+  }));
+
+  function drawBubbles(dt) {
+    const { width: w, height: h } = canvas;
+    ctx.save();
+    ctx.strokeStyle = "rgba(70,70,70,0.6)";
+    ctx.lineWidth = 1.8;
+    for (const b of bubbles) {
+      b.y -= b.speed * dt;
+      if (b.y < -0.05) { b.y = 1.05; b.x = Math.random(); }
+      const shift = state.mode === "sea" ? state.scroll * b.depth : 0;
+      const x = (((b.x * w - shift) % w) + w) % w;
+      ctx.beginPath();
+      ctx.arc(x, b.y * h, b.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function hint(text) {
     const { width: w, height: h } = canvas;
     ctx.save();
@@ -165,9 +186,10 @@ export function startGame(canvas, sprites) {
     ctx.restore();
   }
 
-  function drawSea() {
+  function drawSea(dt) {
     const { width: w, height: h } = canvas;
     drawTile(ctx, water, state.scroll * 0.3, w);
+    drawBubbles(dt);
 
     // Mid layer: coral pillars, parallax, deterministic per world slot
     const SLOT = 520;
@@ -193,10 +215,11 @@ export function startGame(canvas, sprites) {
     if (nearDoor(state)) hint("Press Enter to go home");
   }
 
-  function drawHome() {
+  function drawHome(dt) {
     const { width: w, height: h } = canvas;
     const { floor, sofaW, sofaH, sofas } = homeLayout(w, h);
     drawCave(ctx, w, h, floor);
+    drawBubbles(dt);
     sofas.forEach((f) => ctx.drawImage(sprites.sofa, f.x - sofaW / 2, floor - sofaH, sofaW, sofaH));
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.sitting !== null) hint("Enter leaves home, any arrow stands up");
@@ -210,7 +233,7 @@ export function startGame(canvas, sprites) {
     ctx.save();
     if (state.sitting !== null) {
       const { floor, sofaH } = homeLayout(canvas.width, h);
-      const sitW = sw * 0.62;
+      const sitW = sw * 0.85;
       const sitH = sitW * (sprites.mermaidSit.height / sprites.mermaidSit.width);
       ctx.translate(state.x, floor - sofaH * 0.42);
       ctx.drawImage(sprites.mermaidSit, -sitW * 0.45, -sitH * 0.82, sitW, sitH);
@@ -224,16 +247,17 @@ export function startGame(canvas, sprites) {
     ctx.restore();
   }
 
-  function draw() {
-    if (state.mode === "home") drawHome();
-    else drawSea();
+  function draw(dt) {
+    if (state.mode === "home") drawHome(dt);
+    else drawSea(dt);
   }
 
   function frame(now) {
     if (!running) return;
-    step(state, keys, last === null ? 0 : Math.min((now - last) / 1000, 0.05));
+    const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+    step(state, keys, dt);
     last = now;
-    draw();
+    draw(dt);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -241,6 +265,7 @@ export function startGame(canvas, sprites) {
   return {
     state,
     sprites,
+    bubbles,
     stop() {
       running = false;
       window.removeEventListener("keydown", onDown);
