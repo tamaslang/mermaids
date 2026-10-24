@@ -1,0 +1,13 @@
+{
+  "name": "mermaids",
+  "version": "1.0.0",
+  "description": "An underwater side-scrolling browser game starring a mermaid. Plain HTML/CSS/JS, no build step.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  },
+  "type": "module"
+}
