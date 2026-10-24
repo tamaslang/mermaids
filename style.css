@@ -67,3 +67,6 @@ button:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .mermaid { animation: none; }
 }
+
+#playing { padding: 0; }
+#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
