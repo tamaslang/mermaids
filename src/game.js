@@ -1,4 +1,5 @@
 import { createCritters, updateCritters, drawCritters } from "./critters.js";
+import { drawFurniture } from "./home.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -212,34 +213,51 @@ export function startGame(canvas, sprites) {
 
     drawCritters(ctx, critters, sprites, performance.now());
 
-    // Kelp forest between the coral and the foreground
-    const KSLOT = 310;
-    const kfirst = Math.floor((state.scroll * 0.8) / KSLOT);
-    for (let k = kfirst; k <= kfirst + Math.ceil(w / KSLOT) + 1; k++) {
-      if ((k * 7) % 3 === 0) continue;
-      const kh = 150 + ((k * 37) % 110);
-      ctx.drawImage(sprites.kelp, k * KSLOT - state.scroll * 0.8, h - kh - 4, kh / 3, kh);
-    }
+    drawKelp(ctx, w, h);
 
     // The mermaid's home: a coral reef with a doorway
     const rw = reefWidth(h);
     const rh = rw * (sprites.reef.height / sprites.reef.width);
     ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
 
-    // Seabed weeds in the foreground at full scroll speed
-    const weedW = 400;
-    const weedH = 90;
-    let wx = -(state.scroll % weedW);
-    for (; wx < w; wx += weedW) ctx.drawImage(sprites.weeds, wx, h - weedH, weedW, weedH);
+    drawWeeds(ctx, w, h);
 
     drawMermaid(Math.sin(state.scroll / 40) * 3);
     if (nearDoor(state)) hint("Press Enter to go home");
+  }
+
+  // What the window shows: the sea outside the front door, in the same coordinates as the main view.
+  function drawOutside(c) {
+    const { width: w, height: h } = canvas;
+    drawTile(c, water, state.scroll * 0.3, w);
+    drawCritters(c, critters, sprites, performance.now());
+    drawKelp(c, w, h);
+    drawWeeds(c, w, h);
+  }
+
+  function drawKelp(c, w, h) {
+    const KSLOT = 310;
+    const kfirst = Math.floor((state.scroll * 0.8) / KSLOT);
+    for (let k = kfirst; k <= kfirst + Math.ceil(w / KSLOT) + 1; k++) {
+      if ((k * 7) % 3 === 0) continue;
+      const kh = 150 + ((k * 37) % 110);
+      c.drawImage(sprites.kelp, k * KSLOT - state.scroll * 0.8, h - kh - 4, kh / 3, kh);
+    }
+  }
+
+  function drawWeeds(c, w, h) {
+    const weedW = 400;
+    const weedH = 90;
+    let wx = -(state.scroll % weedW);
+    for (; wx < w; wx += weedW) c.drawImage(sprites.weeds, wx, h - weedH, weedW, weedH);
   }
 
   function drawHome(dt) {
     const { width: w, height: h } = canvas;
     const { floor, sofaW, sofaH, sofas } = homeLayout(w, h);
     drawCave(ctx, w, h, floor);
+    updateCritters(critters, dt, 0, w, h);
+    drawFurniture(ctx, w, h, floor, sprites, performance.now(), drawOutside);
     drawBubbles(dt);
     sofas.forEach((f) => ctx.drawImage(sprites.sofa, f.x - sofaW / 2, floor - sofaH, sofaW, sofaH));
     drawMermaid(Math.sin(performance.now() / 500) * 3);
