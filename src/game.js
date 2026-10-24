@@ -1,3 +1,4 @@
+import { createCritters, updateCritters, drawCritters } from "./critters.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -155,6 +156,7 @@ export function startGame(canvas, sprites) {
   window.addEventListener("keydown", onDown);
   window.addEventListener("keyup", onUp);
 
+  const critters = createCritters(canvas.width, canvas.height);
   const bubbles = Array.from({ length: 28 }, () => ({
     x: Math.random(), y: Math.random(), r: 3 + Math.random() * 8, speed: 0.04 + Math.random() * 0.06, depth: 0.3 + Math.random() * 0.5,
   }));
@@ -186,10 +188,14 @@ export function startGame(canvas, sprites) {
     ctx.restore();
   }
 
+  let prevScroll = 0;
   function drawSea(dt) {
     const { width: w, height: h } = canvas;
+    const dWorld = state.scroll - prevScroll;
+    prevScroll = state.scroll;
     drawTile(ctx, water, state.scroll * 0.3, w);
     drawBubbles(dt);
+    updateCritters(critters, dt, dWorld, w, h);
 
     // Mid layer: coral pillars, parallax, deterministic per world slot
     const SLOT = 520;
@@ -198,6 +204,17 @@ export function startGame(canvas, sprites) {
       const ch = 170 + ((k * 53) % 90);
       const cw = ch * (sprites.coral.width / sprites.coral.height);
       ctx.drawImage(sprites.coral, k * SLOT - state.scroll * 0.6, h - ch - 10, cw, ch);
+    }
+
+    drawCritters(ctx, critters, sprites, performance.now());
+
+    // Kelp forest between the coral and the foreground
+    const KSLOT = 310;
+    const kfirst = Math.floor((state.scroll * 0.8) / KSLOT);
+    for (let k = kfirst; k <= kfirst + Math.ceil(w / KSLOT) + 1; k++) {
+      if ((k * 7) % 3 === 0) continue;
+      const kh = 150 + ((k * 37) % 110);
+      ctx.drawImage(sprites.kelp, k * KSLOT - state.scroll * 0.8, h - kh - 4, kh / 3, kh);
     }
 
     // The mermaid's home: a coral reef with a doorway
@@ -266,6 +283,7 @@ export function startGame(canvas, sprites) {
     state,
     sprites,
     bubbles,
+    critters,
     stop() {
       running = false;
       window.removeEventListener("keydown", onDown);
