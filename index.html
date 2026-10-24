@@ -12,20 +12,17 @@
     <canvas id="ocean" aria-hidden="true"></canvas>
     <section id="welcome" class="screen">
       <h1>Mermaids</h1>
-      <p class="tagline">Dive deep. Swim far. Find the lost pearls.</p>
-      <svg class="mermaid" viewBox="0 0 200 240" role="img" aria-label="A mermaid">
-        <path d="M100 150 Q60 190 70 225 L40 240 L100 232 L160 240 L130 225 Q140 190 100 150Z" fill="#2ec4b6"/>
-        <path d="M70 100 Q50 150 70 175 L80 120Z" fill="#ff7b54"/>
-        <path d="M130 100 Q150 150 130 175 L120 120Z" fill="#ff7b54"/>
-        <circle cx="100" cy="80" r="30" fill="#ffe0bd"/>
-        <path d="M70 80 Q100 20 130 80 Q100 55 70 80Z" fill="#ff7b54"/>
-        <circle cx="90" cy="82" r="3.5" fill="#222"/>
-        <circle cx="110" cy="82" r="3.5" fill="#222"/>
-        <path d="M91 96 Q100 104 109 96" stroke="#c0392b" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M78 120 Q100 108 122 120 L120 155 Q100 165 80 155Z" fill="#9b5de5"/>
-      </svg>
-      <button id="start" type="button">Start Game</button>
-      <p class="hint">Arrow keys or WASD to swim</p>
+      <p class="tagline">dive deep · swim far · find the pearls</p>
+      <div class="stage">
+        <img class="friend jelly" data-sprite="jellyking" alt="">
+        <img class="queen" data-sprite="queen" alt="A mermaid">
+        <img class="friend fish one" data-sprite="fish" alt="">
+        <img class="friend fish two" data-sprite="fish" alt="">
+        <img class="friend pearl left" data-sprite="pearl" alt="">
+        <img class="friend pearl right" data-sprite="pearl" alt="">
+      </div>
+      <button id="start" type="button" disabled>Start Game</button>
+      <p class="hint">arrows / WASD to swim</p>
     </section>
     <section id="playing" class="screen" hidden>
       <canvas id="game-canvas" aria-label="Game"></canvas>

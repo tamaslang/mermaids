@@ -1,3 +1,5 @@
+import { makeWaterTile, drawTile } from "./paper.js";
+
 export const SPEED = 260;
 export const WORLD_SPEED = 120;
 
@@ -23,7 +25,7 @@ const KEY_MAP = {
   ArrowDown: "down", s: "down", S: "down",
 };
 
-export function startGame(canvas) {
+export function startGame(canvas, sprites) {
   const ctx = canvas.getContext("2d");
   const keys = new Set();
   const state = createState(canvas.width, canvas.height);
@@ -35,37 +37,32 @@ export function startGame(canvas) {
   window.addEventListener("keydown", onDown);
   window.addEventListener("keyup", onUp);
 
+  const water = makeWaterTile(canvas.width, canvas.height, 21);
+  const SPRITE_W = 150;
+
   function draw() {
     const { width: w, height: h } = canvas;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#0a6e9e");
-    g.addColorStop(1, "#021b33");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    drawTile(ctx, water, state.scroll * 0.3, w);
 
-    // Scrolling seabed rocks
-    ctx.fillStyle = "#0b3a4a";
-    for (let i = -1; i < w / 120 + 2; i++) {
-      const wx = i * 120 - (state.scroll % 120);
-      const rockH = 30 + ((((Math.floor((i * 120 + state.scroll) / 120) * 37) % 40) + 40) % 40);
-      ctx.beginPath();
-      ctx.ellipse(wx + 60, h, 70, rockH, 0, Math.PI, 0);
-      ctx.fill();
+    // Mid layer: coral pillars, parallax, deterministic per world slot
+    const SLOT = 520;
+    const first = Math.floor((state.scroll * 0.6) / SLOT);
+    for (let k = first; k <= first + Math.ceil(w / SLOT) + 1; k++) {
+      const ch = 170 + ((k * 53) % 90);
+      const cw = ch * (sprites.coral.width / sprites.coral.height);
+      ctx.drawImage(sprites.coral, k * SLOT - state.scroll * 0.6, h - ch - 10, cw, ch);
     }
 
-    // Mermaid: hair, tail, head
-    ctx.fillStyle = "#ff7b54";
-    ctx.beginPath();
-    ctx.ellipse(state.x + 4, state.y - 10, 12, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#2ec4b6";
-    ctx.beginPath();
-    ctx.ellipse(state.x - 20, state.y, 28, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffe0bd";
-    ctx.beginPath();
-    ctx.arc(state.x + 14, state.y - 10, 14, 0, Math.PI * 2);
-    ctx.fill();
+    // Seabed weeds in the foreground at full scroll speed
+    const weedW = 400;
+    const weedH = 90;
+    let wx = -(state.scroll % weedW);
+    for (; wx < w; wx += weedW) ctx.drawImage(sprites.weeds, wx, h - weedH, weedW, weedH);
+
+    // Mermaid, with a gentle bob
+    const bob = Math.sin(state.scroll / 40) * 3;
+    const sh = SPRITE_W * (sprites.mermaid.height / sprites.mermaid.width);
+    ctx.drawImage(sprites.mermaid, state.x - SPRITE_W / 2, state.y - sh / 2 + bob, SPRITE_W, sh);
   }
 
   function frame(now) {
@@ -79,6 +76,7 @@ export function startGame(canvas) {
 
   return {
     state,
+    sprites,
     stop() {
       running = false;
       window.removeEventListener("keydown", onDown);

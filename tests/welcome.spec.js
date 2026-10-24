@@ -9,7 +9,9 @@ test("welcome screen loads without errors", async ({ page }) => {
   expect(response.ok()).toBeTruthy();
   await expect(page).toHaveTitle("Mermaids");
   await expect(page.locator("h1")).toHaveText("Mermaids");
-  await expect(page.getByRole("img", { name: "A mermaid" })).toBeVisible();
+  const queen = page.getByRole("img", { name: "A mermaid" });
+  await expect(queen).toBeVisible();
+  await expect.poll(() => queen.evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
   await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
   await expect(page.locator("#ocean")).toBeVisible();
   expect(errors).toEqual([]);

@@ -55,3 +55,10 @@ test("game canvas is painted and the page has no errors", async ({ page }) => {
   expect(painted).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test("all hand-drawn sprites load", async ({ page }) => {
+  await start(page);
+  const bad = await page.evaluate(() =>
+    Object.entries(window.__game.sprites).filter(([, i]) => !i.naturalWidth).map(([n]) => n));
+  expect(bad).toEqual([]);
+});
