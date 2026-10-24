@@ -7,6 +7,16 @@ export function createState(width, height) {
   return { width, height, x: width * 0.25, y: height / 2, scroll: 0, size: 40 };
 }
 
+// Keep the mermaid at the same relative spot when the screen size changes.
+export function resizeState(state, width, height) {
+  state.x = (state.x / state.width) * width;
+  state.y = (state.y / state.height) * height;
+  state.width = width;
+  state.height = height;
+}
+
+export const spriteWidth = (h) => Math.min(280, Math.max(120, h * 0.3));
+
 // Pure update: `keys` is a Set of normalised direction names.
 export function step(state, keys, dt) {
   const dx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
@@ -29,6 +39,18 @@ export function startGame(canvas, sprites) {
   const ctx = canvas.getContext("2d");
   const keys = new Set();
   const state = createState(canvas.width, canvas.height);
+  let water = makeWaterTile(canvas.width, canvas.height, 21);
+
+  function onResize() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h || (w === canvas.width && h === canvas.height)) return;
+    canvas.width = w;
+    canvas.height = h;
+    resizeState(state, w, h);
+    water = makeWaterTile(w, h, 21);
+  }
+  window.addEventListener("resize", onResize);
   let last = null;
   let running = true;
 
@@ -36,9 +58,6 @@ export function startGame(canvas, sprites) {
   const onUp = (e) => { const k = KEY_MAP[e.key]; if (k) keys.delete(k); };
   window.addEventListener("keydown", onDown);
   window.addEventListener("keyup", onUp);
-
-  const water = makeWaterTile(canvas.width, canvas.height, 21);
-  const SPRITE_W = 150;
 
   function draw() {
     const { width: w, height: h } = canvas;
@@ -61,8 +80,9 @@ export function startGame(canvas, sprites) {
 
     // Mermaid, with a gentle bob
     const bob = Math.sin(state.scroll / 40) * 3;
-    const sh = SPRITE_W * (sprites.mermaid.height / sprites.mermaid.width);
-    ctx.drawImage(sprites.mermaid, state.x - SPRITE_W / 2, state.y - sh / 2 + bob, SPRITE_W, sh);
+    const sw = spriteWidth(h);
+    const sh = sw * (sprites.mermaid.height / sprites.mermaid.width);
+    ctx.drawImage(sprites.mermaid, state.x - sw / 2, state.y - sh / 2 + bob, sw, sh);
   }
 
   function frame(now) {
@@ -81,6 +101,7 @@ export function startGame(canvas, sprites) {
       running = false;
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
+      window.removeEventListener("resize", onResize);
     },
   };
 }

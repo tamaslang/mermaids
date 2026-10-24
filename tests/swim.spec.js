@@ -62,3 +62,27 @@ test("all hand-drawn sprites load", async ({ page }) => {
     Object.entries(window.__game.sprites).filter(([, i]) => !i.naturalWidth).map(([n]) => n));
   expect(bad).toEqual([]);
 });
+
+test("mermaid is drawn on screen at start and after a resize", async ({ page }) => {
+  await start(page);
+  const visible = () => page.evaluate(() => {
+    const c = document.getElementById("game-canvas");
+    const { x, y } = window.__game.state;
+    const ctx = c.getContext("2d");
+    // Mermaid hair/tail are saturated colours; the paper and water are not.
+    const d = ctx.getImageData(Math.max(0, x - 90), Math.max(0, y - 40), 180, 80).data;
+    let colourful = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 90 && d[i + 3] > 0 && d[i] > 150) colourful++;
+    return { colourful, inside: x > 0 && x < c.width && y > 0 && y < c.height };
+  });
+  await page.waitForTimeout(150);
+  let v = await visible();
+  expect(v.inside).toBe(true);
+  expect(v.colourful).toBeGreaterThan(20);
+
+  await page.setViewportSize({ width: 500, height: 900 });
+  await page.waitForTimeout(200);
+  v = await visible();
+  expect(v.inside).toBe(true);
+  expect(v.colourful).toBeGreaterThan(20);
+});
