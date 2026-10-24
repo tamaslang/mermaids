@@ -60,7 +60,7 @@ const CORAL = `<g filter="url(#wobble)" stroke="#8a2a55" stroke-width="2" stroke
   <path d="M34 300 Q22 150 38 6 Q52 140 50 300" fill="none"/>
 </g>`;
 
-const WEEDS = `<path filter="url(#wobble)" stroke="#777" stroke-width="2.2" fill="none" stroke-linecap="round"
+const WEEDS = `<path filter="url(#wobble)" stroke="#3f8f45" stroke-width="2.6" fill="none" stroke-linecap="round"
   d="M10 90 L18 20 L26 90 M40 90 L48 8 L56 90 M72 90 L78 30 L88 90 M104 90 L112 14 L120 90 M140 90 L146 36 L156 90 M176 90 L184 10 L194 90 M214 90 L220 40 L230 90 M250 90 L258 16 L266 90 M290 90 L296 34 L306 90 M330 90 L338 12 L348 90 M370 90 L376 38 L386 90"/>`;
 
 const REEF = `<g filter="url(#wobble)" stroke="#8a2a55" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
@@ -100,6 +100,40 @@ const MERMAID_SIT = `<g filter="url(#wobble)" stroke="#444" stroke-width="2.4" s
   <path d="M102 50 Q108 54 114 49" fill="none" stroke="#c0392b"/>
 </g>`;
 
+const FISH2 = `<g filter="url(#wobble)" stroke="#555" stroke-width="2" stroke-linejoin="round">
+  <path d="M4 22 L22 6 Q52 -2 70 22 Q52 46 22 38Z" fill="#8fb8e8" filter="url(#crayon)"/>
+  <path d="M4 22 L22 6 Q52 -2 70 22 Q52 46 22 38Z" fill="none"/>
+  <path d="M4 22 L-10 8 L-10 36Z" fill="#f0d34a"/><path d="M34 6 Q30 22 34 38 M46 6 Q42 22 46 38" fill="none"/>
+  <circle cx="58" cy="18" r="2.6" fill="#333" stroke="none"/>
+</g>`;
+
+const CRAB = `<g filter="url(#wobble)" stroke="#7a2e1c" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M24 40 L8 52 M30 44 L16 58 M76 40 L92 52 M70 44 L84 58" fill="none"/>
+  <path d="M26 30 L10 12 Q4 2 16 4 L24 14 L28 8 Q36 8 32 20Z M74 30 L90 12 Q96 2 84 4 L76 14 L72 8 Q64 8 68 20Z" fill="#e9663f" filter="url(#crayon)"/>
+  <ellipse cx="50" cy="38" rx="27" ry="17" fill="#e9663f" filter="url(#crayon)"/>
+  <ellipse cx="50" cy="38" rx="27" ry="17" fill="none"/>
+  <path d="M42 24 L42 14 M58 24 L58 14" fill="none"/><circle cx="42" cy="12" r="4" fill="#fff"/><circle cx="58" cy="12" r="4" fill="#fff"/>
+  <circle cx="42" cy="12" r="1.6" fill="#222" stroke="none"/><circle cx="58" cy="12" r="1.6" fill="#222" stroke="none"/>
+  <path d="M44 42 Q50 48 56 42" fill="none"/>
+</g>`;
+
+const TURTLE = `<g filter="url(#wobble)" stroke="#2f5d36" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M2 40 L16 36 L14 46Z" fill="#8fc77a"/>
+  <path d="M30 56 L18 68 L40 64Z M72 56 L84 68 L62 64Z" fill="#8fc77a"/>
+  <path d="M84 40 Q108 34 116 44 Q112 54 90 50Z" fill="#8fc77a"/>
+  <path d="M14 52 Q18 4 60 6 Q98 8 100 52Z" fill="#5aa65a" filter="url(#crayon)"/>
+  <path d="M14 52 Q18 4 60 6 Q98 8 100 52Z" fill="none"/>
+  <path d="M34 50 L40 22 L62 16 L82 24 L88 50 M40 22 L50 50 M62 16 L66 50 M82 24 L76 50" fill="none" stroke-width="1.8"/>
+  <circle cx="106" cy="42" r="2.4" fill="#222" stroke="none"/>
+</g>`;
+
+const KELP = `<g filter="url(#wobble)" stroke="#2f6d3a" stroke-width="2.2" stroke-linejoin="round">
+  <path d="M30 300 Q4 220 28 150 Q50 80 24 6 Q70 70 48 150 Q26 220 50 300Z" fill="#4fa35a" filter="url(#crayon)"/>
+  <path d="M30 300 Q4 220 28 150 Q50 80 24 6 Q70 70 48 150 Q26 220 50 300" fill="none"/>
+  <path d="M56 300 Q40 240 60 190 Q80 140 62 90 Q96 140 80 200 Q64 250 80 300Z" fill="#7bc070" filter="url(#crayon)"/>
+  <path d="M56 300 Q40 240 60 190 Q80 140 62 90 Q96 140 80 200 Q64 250 80 300" fill="none"/>
+</g>`;
+
 // name -> [viewBox, rendered pixel size (2x for crispness), inner markup]
 const SPRITES = {
   mermaid: ["-10 -10 240 130", 480, 260, MERMAID],
@@ -109,6 +143,10 @@ const SPRITES = {
   pearl: ["-4 -4 48 48", 96, 96, PEARL],
   coral: ["-4 0 88 304", 176, 608, CORAL],
   weeds: ["0 0 400 100", 800, 200, WEEDS],
+  fish2: ["-14 -4 94 52", 188, 104, FISH2],
+  crab: ["0 0 100 64", 200, 128, CRAB],
+  turtle: ["0 0 120 72", 240, 144, TURTLE],
+  kelp: ["0 0 100 300", 200, 600, KELP],
   reef: ["-4 0 428 304", 856, 608, REEF],
   sofa: ["-4 0 208 120", 416, 240, SOFA],
   mermaidSit: ["40 0 160 150", 320, 300, MERMAID_SIT],

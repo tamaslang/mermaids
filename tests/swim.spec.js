@@ -167,3 +167,25 @@ test("bubbles rise in the game", async ({ page }) => {
   const y1 = await page.evaluate(() => window.__game.bubbles.map((b) => b.y));
   expect(y1.filter((y, i) => y < y0[i]).length).toBeGreaterThan(10);
 });
+
+test("sea creatures swim around and stay decorative", async ({ page }) => {
+  await start(page);
+  const kinds = await page.evaluate(() => [...new Set(window.__game.critters.map((c) => c.kind))].sort());
+  expect(kinds).toEqual(["crab", "fish", "turtle"]);
+  const x0 = await page.evaluate(() => window.__game.critters.map((c) => c.x));
+  await page.waitForTimeout(600);
+  const x1 = await page.evaluate(() => window.__game.critters.map((c) => c.x));
+  expect(x1.some((x, i) => x !== x0[i])).toBe(true);
+});
+
+test("losing focus releases held keys so she stops", async ({ page }) => {
+  await start(page);
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  expect(await page.evaluate(() => window.__game.keys.size)).toBe(0);
+  await page.waitForTimeout(800);
+  const a = await pos(page);
+  await page.waitForTimeout(300);
+  expect((await pos(page)).x).toBe(a.x);
+});
