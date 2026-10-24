@@ -1,4 +1,5 @@
-import { createCritters, updateCritters, drawCritters } from "./critters.js";
+import { createCritters, updateCritters, drawCritters, drawCritterSpeech, nearestCritter, greet } from "./critters.js";
+import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
@@ -23,7 +24,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null };
 }
 
 export function nearDoor(state) {
@@ -69,6 +70,41 @@ export function toggleSit(state) {
   state.x = homeLayout(state.width, state.height).sofas[i].x;
 }
 
+const SAY_FOR = 2;
+
+// Holding B blows a stream of bubbles from the mouth; they wobble upward and pop.
+function updatePuffs(state, keys, dt) {
+  if (keys.has("bubble")) {
+    state.puffTimer -= dt;
+    if (state.puffTimer <= 0 && state.puffs.length < 60) {
+      state.puffTimer = 0.09;
+      const sw = spriteWidth(state.height);
+      state.puffs.push({
+        x: state.x + state.facing * sw * 0.42,
+        y: state.y - sw * 0.02,
+        r: 3 + Math.random() * 6,
+        vy: 50 + Math.random() * 40,
+        vx: state.facing * (10 + Math.random() * 25),
+        phase: Math.random() * 6,
+        age: 0,
+        life: 1.6 + Math.random() * 1.2,
+      });
+    }
+  } else {
+    state.puffTimer = 0;
+  }
+  for (const p of state.puffs) {
+    p.age += dt;
+    p.y -= p.vy * dt;
+    p.x += p.vx * dt + Math.sin(p.age * 6 + p.phase) * 0.4;
+  }
+  state.puffs = state.puffs.filter((p) => p.age < p.life);
+  if (state.say) {
+    state.say.age += dt;
+    if (state.say.age > SAY_FOR) state.say = null;
+  }
+}
+
 export function startFlip(state) {
   if (!state.flip) state.flip = 0.0001;
 }
@@ -78,6 +114,7 @@ export function startFlip(state) {
 export function step(state, keys, dt) {
   const dx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
   const dy = (keys.has("down") ? 1 : 0) - (keys.has("up") ? 1 : 0);
+  updatePuffs(state, keys, dt);
   if (state.sitting !== null) {
     if (dx || dy) state.sitting = null;
     else { state.vx = state.vy = 0; return; }
@@ -121,6 +158,7 @@ const KEY_MAP = {
   ArrowRight: "right", d: "right", D: "right",
   ArrowUp: "up", w: "up", W: "up",
   ArrowDown: "down", s: "down", S: "down",
+  b: "bubble", B: "bubble",
 };
 
 export function startGame(canvas, sprites) {
@@ -145,6 +183,11 @@ export function startGame(canvas, sprites) {
   const onDown = (e) => {
     if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) toggleDoor(state); return; }
     if ((e.key === "e" || e.key === "E") && !e.repeat) { toggleSit(state); return; }
+    if ((e.key === "h" || e.key === "H") && !e.repeat) {
+      const c = state.mode === "sea" ? nearestCritter(critters, state.x, state.y, canvas.width) : null;
+      if (c) { state.say = { text: "Hello!", age: 0 }; greet(c, state.x); }
+      return;
+    }
     if (e.key === " ") {
       e.preventDefault();
       if (!e.repeat) startFlip(state);
@@ -223,6 +266,11 @@ export function startGame(canvas, sprites) {
     drawWeeds(ctx, w, h);
 
     drawMermaid(Math.sin(state.scroll / 40) * 3);
+    drawCritterSpeech(ctx, critters);
+    if (state.say) {
+      const fade = Math.min(1, (SAY_FOR - state.say.age) / 0.4);
+      drawSpeech(ctx, state.x, state.y - spriteWidth(h) * 0.3, state.say.text, fade);
+    }
     if (nearDoor(state)) hint("Press Enter to go home");
   }
 
@@ -266,7 +314,27 @@ export function startGame(canvas, sprites) {
     else hint("Press Enter to leave home");
   }
 
+  function drawPuffs() {
+    ctx.save();
+    for (const p of state.puffs) {
+      const fade = Math.min(1, (p.life - p.age) / 0.3);
+      ctx.globalAlpha = fade;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(200,225,245,0.45)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(70,70,70,0.8)";
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(p.x - p.r * 0.35, p.y - p.r * 0.35, p.r * 0.25, 0, Math.PI * 1.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawMermaid(bob) {
+    drawPuffs();
     const h = canvas.height;
     const sw = spriteWidth(h);
     ctx.save();

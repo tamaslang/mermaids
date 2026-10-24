@@ -1,3 +1,5 @@
+import { drawSpeech } from "./speech.js";
+
 // Decorative background animals. They never interact with the mermaid.
 
 const KINDS = {
@@ -5,6 +7,29 @@ const KINDS = {
   turtle: { sprites: ["turtle"], width: [100, 140], speed: [25, 45], depth: 0.5, lane: [0.2, 0.6] },
   crab: { sprites: ["crab"], width: [60, 80], speed: [18, 35], depth: 0.8, lane: null },
 };
+
+export const SAY_SECONDS = 2;
+export const REPLY_DELAY = 0.9;
+const GREET_RANGE = 300;
+
+// The closest visible critter within greeting range, or null.
+export function nearestCritter(list, x, y, w, range = GREET_RANGE) {
+  let best = null;
+  let bestD = range;
+  for (const c of list) {
+    if (c.wait > 0 || c.x < 0 || c.x > w) continue;
+    const d = Math.hypot(c.x - x, c.y - y);
+    if (d < bestD) { best = c; bestD = d; }
+  }
+  return best;
+}
+
+// The critter pauses, turns toward the mermaid and says hello back a moment later.
+export function greet(c, fromX) {
+  c.dir = fromX >= c.x ? 1 : -1;
+  c.hold = REPLY_DELAY + SAY_SECONDS;
+  c.say = { text: "Hello!", age: 0, delay: REPLY_DELAY };
+}
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -33,8 +58,19 @@ export function createCritters(w, h) {
 export function updateCritters(list, dt, worldDx, w, h) {
   for (const c of list) {
     if (c.wait > 0) { c.wait -= dt; continue; }
-    c.x += c.dir * c.speed * dt - worldDx * KINDS[c.kind].depth;
+    if (c.say) c.say.age += dt;
+    if (c.say && c.say.age > c.say.delay + SAY_SECONDS) c.say = null;
+    if (c.hold > 0) c.hold -= dt;
+    c.x += (c.hold > 0 ? 0 : c.dir * c.speed * dt) - worldDx * KINDS[c.kind].depth;
     if (c.x < -c.w * 1.5 || c.x > w + c.w * 1.5) spawn(c, w, h, false);
+  }
+}
+
+export function drawCritterSpeech(ctx, list) {
+  for (const c of list) {
+    if (c.wait > 0 || !c.say || c.say.age < c.say.delay) continue;
+    const fade = Math.min(1, (c.say.delay + SAY_SECONDS - c.say.age) / 0.4);
+    drawSpeech(ctx, c.x, c.y - c.w * 0.3, c.say.text, fade);
   }
 }
 

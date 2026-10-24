@@ -10,7 +10,7 @@ Open http://localhost:4174.
 
 ## Controls
 
-Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit.
+Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit. Hold B to blow bubbles; press H near an animal to say hello.
 
 ## Test
 

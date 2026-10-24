@@ -53,3 +53,15 @@ for (const size of [{ width: 1100, height: 640 }, { width: 400, height: 800 }]) 
     }
   });
 }
+
+test("controls legend is shown on the welcome screen and fits the viewport", async ({ page }) => {
+  await page.goto("/");
+  const legend = page.getByLabel("Controls");
+  await expect(legend).toBeVisible();
+  for (const key of ["Space", "B (hold)", "H", "Enter", "E"]) await expect(legend).toContainText(key);
+  const box = await legend.boundingBox();
+  const vp = page.viewportSize();
+  expect(box.y + box.height).toBeLessThanOrEqual(vp.height);
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+});

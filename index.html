@@ -22,7 +22,14 @@
         <img class="friend pearl right" data-sprite="pearl" alt="">
       </div>
       <button id="start" type="button" disabled>Start Game</button>
-      <p class="hint">arrows / WASD to swim</p>
+      <dl class="legend" aria-label="Controls">
+        <div><dt>← ↑ ↓ → / WASD</dt><dd>swim</dd></div>
+        <div><dt>Space</dt><dd>flip</dd></div>
+        <div><dt>B (hold)</dt><dd>blow bubbles</dd></div>
+        <div><dt>H</dt><dd>say hello</dd></div>
+        <div><dt>Enter</dt><dd>go home / leave</dd></div>
+        <div><dt>E</dt><dd>sit on a sofa</dd></div>
+      </dl>
     </section>
     <section id="playing" class="screen" hidden>
       <canvas id="game-canvas" aria-label="Game"></canvas>

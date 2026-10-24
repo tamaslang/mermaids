@@ -79,7 +79,28 @@ button:active:not(:disabled) { transform: translateY(2px); }
 button:disabled { opacity: 0.5; cursor: default; }
 button:focus-visible { box-shadow: 0 0 0 4px #6fa8dc; }
 
-.hint { margin: 0; font-size: 0.9rem; color: #666; }
+.legend {
+  margin: 0.3rem 0 0;
+  padding: 0.4rem 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0.15rem 1.4rem;
+  font-size: 0.85rem;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.55);
+  border: 2px solid #666;
+  border-radius: 8px 12px 9px 11px;
+}
+.legend div { display: flex; flex-direction: column; }
+.legend dt { font-weight: bold; color: #d93a2e; }
+.legend dd { margin: 0; color: #555; }
+
+@media (max-width: 640px) {
+  .legend { grid-template-columns: repeat(2, auto); }
+}
+@media (max-height: 620px) {
+  .stage { height: min(36vh, 420px); }
+}
 
 #playing { padding: 0; }
 #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
