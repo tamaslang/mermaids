@@ -8,6 +8,10 @@ An underwater side-scrolling browser game starring a mermaid. Plain HTML/CSS/JS,
 
 Open http://localhost:4174.
 
+## Controls
+
+Arrow keys / WASD swim, Space does a flip.
+
 ## Test
 
     npm ci

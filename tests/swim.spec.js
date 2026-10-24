@@ -43,14 +43,38 @@ test("arrow keys move the mermaid", async ({ page }) => {
   expect(c.x).toBeGreaterThan(b.x);
 });
 
-test("mermaid stays inside the screen", async ({ page }) => {
+test("whole mermaid stays on screen against every edge", async ({ page }) => {
   await start(page);
-  await page.keyboard.down("ArrowDown");
-  await page.waitForTimeout(2500);
-  await page.keyboard.up("ArrowDown");
-  const p = await pos(page);
-  const h = await page.evaluate(() => window.__game.state.height);
-  expect(p.y).toBeLessThanOrEqual(h);
+  const edges = async (key, ms) => {
+    await page.keyboard.down(key);
+    await page.waitForTimeout(ms);
+    await page.keyboard.up(key);
+    return page.evaluate(() => {
+      const g = window.__game;
+      const c = document.getElementById("game-canvas");
+      const sw = Math.min(280, Math.max(120, c.height * 0.3));
+      return { x: g.state.x, y: g.state.y, w: c.width, h: c.height, halfW: sw * 0.4, halfH: sw * 0.2 };
+    });
+  };
+  let e = await edges("ArrowRight", 2500);
+  expect(e.x + e.halfW).toBeLessThanOrEqual(e.w);
+  e = await edges("ArrowLeft", 4500);
+  expect(e.x - e.halfW).toBeGreaterThanOrEqual(0);
+  e = await edges("ArrowDown", 2500);
+  expect(e.y + e.halfH).toBeLessThanOrEqual(e.h);
+  e = await edges("ArrowUp", 4500);
+  expect(e.y - e.halfH).toBeGreaterThanOrEqual(0);
+});
+
+test("Space does a flip that completes", async ({ page }) => {
+  await start(page);
+  expect(await page.evaluate(() => window.__game.state.flip)).toBe(0);
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(250);
+  const mid = await page.evaluate(() => window.__game.state.flip);
+  expect(mid).toBeGreaterThan(0);
+  expect(mid).toBeLessThan(1);
+  await expect.poll(() => page.evaluate(() => window.__game.state.flip)).toBe(0);
 });
 
 test("game canvas is painted and the page has no errors", async ({ page }) => {
