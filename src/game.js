@@ -155,6 +155,10 @@ export function startGame(canvas, sprites) {
   const onUp = (e) => { const k = KEY_MAP[e.key]; if (k) keys.delete(k); };
   window.addEventListener("keydown", onDown);
   window.addEventListener("keyup", onUp);
+  // Key-up events are lost when focus leaves the page, so release everything.
+  const releaseKeys = () => keys.clear();
+  window.addEventListener("blur", releaseKeys);
+  document.addEventListener("visibilitychange", releaseKeys);
 
   const critters = createCritters(canvas.width, canvas.height);
   const bubbles = Array.from({ length: 28 }, () => ({
@@ -284,10 +288,13 @@ export function startGame(canvas, sprites) {
     sprites,
     bubbles,
     critters,
+    keys,
     stop() {
       running = false;
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", releaseKeys);
+      document.removeEventListener("visibilitychange", releaseKeys);
       window.removeEventListener("resize", onResize);
     },
   };
