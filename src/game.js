@@ -49,7 +49,7 @@ export function step(state, keys, dt) {
   state.turn += (state.facing - state.turn) * Math.min(1, TURN_RATE * dt);
   if (Math.abs(state.facing - state.turn) < 0.01) state.turn = state.facing;
 
-  if (state.vx > 0) state.scroll += (state.vx / SPEED) * WORLD_SPEED * dt;
+  state.scroll = Math.max(0, state.scroll + (state.vx / SPEED) * WORLD_SPEED * dt);
 }
 
 // Keep the mermaid at the same relative spot when the screen size changes.
