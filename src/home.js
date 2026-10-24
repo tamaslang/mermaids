@@ -49,9 +49,9 @@ function windowPts(r, grow = 0, seed = 0) {
     const a = (i / N) * Math.PI * 2;
     const c = Math.cos(a);
     const sn = Math.sin(a);
-    const px = Math.sign(c) * Math.pow(Math.abs(c), 0.45) * (r.w / 2 + grow);
-    const py = Math.sign(sn) * Math.pow(Math.abs(sn), 0.45) * (r.h / 2 + grow);
-    pts.push([cx + px + jit(i + seed, 2.4), cy + py + jit(i + seed + 70, 2.4)]);
+    const px = Math.sign(c) * Math.pow(Math.abs(c), 0.3) * (r.w / 2 + grow);
+    const py = Math.sign(sn) * Math.pow(Math.abs(sn), 0.3) * (r.h / 2 + grow);
+    pts.push([cx + px + jit(i + seed, 1.5), cy + py + jit(i + seed + 70, 1.5)]);
   }
   return pts;
 }
@@ -74,33 +74,45 @@ function drawWindow(ctx, w, h, drawOutside) {
   drawOutside(ctx);
   ctx.restore();
 
-  // Crayon-scribbled wooden frame: a thick band of short strokes between two wobbly pencil outlines
-  const outer = windowPts(r, 9, 11);
+  // Solid wooden frame with scratchy crayon hatching and sketchy, doubled pencil outlines
+  const outer = windowPts(r, 8, 11);
   const inner = windowPts(r, -1, 23);
   ctx.save();
   ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(201,138,106,0.9)";
-  ctx.lineWidth = 3.4;
-  outer.forEach(([ox, oy], i) => {
-    const [ix, iy] = inner[i];
-    for (let j = 0; j < 3; j++) {
-      const f = 0.1 + j * 0.35;
+  ctx.lineJoin = "round";
+  tracePts(ctx, windowPts(r, 3.5, 5));
+  ctx.strokeStyle = "#c98a6a";
+  ctx.lineWidth = 9;
+  ctx.stroke();
+  let seed = 17;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  ctx.strokeStyle = "rgba(120,70,50,0.55)";
+  ctx.lineWidth = 1.3;
+  for (let n = 0; n < 3; n++) {
+    outer.forEach(([ox, oy], i) => {
+      const [ix, iy] = inner[i];
+      const f = rnd() * 0.6;
       ctx.beginPath();
-      ctx.moveTo(ox + (ix - ox) * f, oy + (iy - oy) * f);
-      ctx.lineTo(ox + (ix - ox) * (f + 0.4), oy + (iy - oy) * (f + 0.4));
+      ctx.moveTo(ox + (ix - ox) * f + (rnd() - 0.5) * 3, oy + (iy - oy) * f + (rnd() - 0.5) * 3);
+      ctx.lineTo(ox + (ix - ox) * (f + 0.35), oy + (iy - oy) * (f + 0.35));
       ctx.stroke();
-    }
-  });
+    });
+  }
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.6;
+  ctx.lineWidth = 2.4;
   tracePts(ctx, outer);
   ctx.stroke();
+  tracePts(ctx, windowPts(r, 10.5, 41));
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.55;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.lineWidth = 2;
   tracePts(ctx, inner);
   ctx.stroke();
+  tracePts(ctx, windowPts(r, -3, 59));
   ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.5;
-  tracePts(ctx, windowPts(r, 10.5, 41));
+  ctx.globalAlpha = 0.45;
   ctx.stroke();
   ctx.globalAlpha = 1;
 
@@ -142,157 +154,6 @@ function drawFrame(ctx, img, x, y, fw, tilt) {
   const iw2 = ih * (img.width / img.height);
   ctx.drawImage(img, -iw2 / 2, -ih / 2, iw2, ih);
   ctx.restore();
-}
-
-// A TV shaped like a scallop shell: fanned ribs, a scalloped rim and the screen in the middle.
-function shellOutline(x, bottom, tw, th, steps = 6) {
-  const cy = bottom - th * 0.42;
-  const rx = tw / 2;
-  const ry = th * 0.58;
-  const pts = [[x - tw * 0.13, bottom]];
-  pts.push([x - rx * 0.9, cy + ry * 0.35]);
-  for (let i = 0; i < steps; i++) {
-    for (let j = 0; j <= 4; j++) {
-      const a = Math.PI + ((i + j / 4) / steps) * Math.PI;
-      const bump = 1 + 0.1 * Math.sin((j / 4) * Math.PI);
-      pts.push([x + Math.cos(a) * rx * bump, cy + Math.sin(a) * ry * bump]);
-    }
-  }
-  pts.push([x + rx * 0.9, cy + ry * 0.35]);
-  pts.push([x + tw * 0.13, bottom]);
-  return { pts, cy, rx, ry };
-}
-
-function drawTV(ctx, sprites, x, bottom, tw, t) {
-  const th = tw * 0.85;
-  const { pts, cy, rx, ry } = shellOutline(x, bottom, tw, th);
-
-  wobblyPath(ctx, pts, true, 3);
-  ctx.fillStyle = "#f7c2d0";
-  ctx.fill();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.6;
-  ctx.lineJoin = ctx.lineCap = "round";
-  ctx.stroke();
-  wobblyPath(ctx, pts, true, 9);
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.5;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Fan ribs radiating from the hinge
-  ctx.strokeStyle = "#c0687f";
-  ctx.lineWidth = 2;
-  for (let i = 1; i < 6; i++) {
-    const a = Math.PI + (i / 6) * Math.PI;
-    wobblyPath(ctx, [[x, bottom], [x + Math.cos(a) * rx * 1.05, cy + Math.sin(a) * ry * 1.05]], false, i * 5);
-    ctx.stroke();
-  }
-
-  // Screen
-  const sx = x;
-  const sy = cy - ry * 0.05;
-  const srx = rx * 0.62;
-  const sry = ry * 0.62;
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(sx, sy, srx, sry, 0, 0, Math.PI * 2);
-  ctx.clip();
-  // Sunset drawn like the rest of the game: crayon scribbles on paper with pencil outlines
-  const top = sy - sry;
-  const horizon = sy + sry * 0.3;
-  ctx.fillStyle = "#f8f3e6";
-  ctx.fillRect(sx - srx, top, srx * 2, sry * 2);
-  let seed = 5;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  ctx.lineCap = "round";
-  const scribble = (y0, y1, color, count, slant) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3.2;
-    for (let i = 0; i < count; i++) {
-      const px = sx - srx + rnd() * srx * 2;
-      const py = y0 + rnd() * (y1 - y0);
-      const len = 8 + rnd() * 10;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px + len * slant, py + (rnd() - 0.5) * 4);
-      ctx.stroke();
-    }
-  };
-  const bandH = (horizon - top) / 4;
-  scribble(top, top + bandH * 1.2, "rgba(140,100,190,0.85)", 70, 1);
-  scribble(top + bandH * 0.9, top + bandH * 2.2, "rgba(236,110,150,0.85)", 80, 1);
-  scribble(top + bandH * 1.9, top + bandH * 3.2, "rgba(255,150,70,0.9)", 80, 1);
-  scribble(top + bandH * 2.9, horizon, "rgba(255,210,90,0.9)", 70, 1);
-  scribble(horizon, sy + sry, "rgba(80,120,190,0.85)", 110, 1);
-
-  const sunR = sry * 0.32;
-  ctx.beginPath();
-  ctx.arc(sx, horizon, sunR, Math.PI, 0);
-  ctx.closePath();
-  ctx.fillStyle = "#f8f3e6";
-  ctx.fill();
-  scribble(horizon - sunR, horizon, "rgba(255,196,40,0.95)", 40, 0.2);
-  ctx.strokeStyle = "#8a5a2a";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(sx, horizon, sunR, Math.PI, 0);
-  ctx.stroke();
-  for (let i = 0; i < 7; i++) {
-    const a = Math.PI + ((i + 0.5) / 7) * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(sx + Math.cos(a) * sunR * 1.25, horizon + Math.sin(a) * sunR * 1.25);
-    ctx.lineTo(sx + Math.cos(a) * sunR * 1.6, horizon + Math.sin(a) * sunR * 1.6);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "#555";
-  ctx.beginPath();
-  ctx.moveTo(sx - srx, horizon);
-  for (let xx = 0; xx <= srx * 2; xx += 12) ctx.lineTo(sx - srx + xx, horizon + Math.sin(xx) * 0.8);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,225,140,0.95)";
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 4; i++) {
-    const yy = horizon + 8 + i * (sry * 0.16);
-    const len = sunR * (1.4 - i * 0.28);
-    const dx = Math.sin(t / 500 + i) * 4;
-    ctx.beginPath();
-    ctx.moveTo(sx - len + dx, yy);
-    ctx.lineTo(sx + len + dx, yy);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "#444";
-  ctx.lineWidth = 2;
-  ctx.lineCap = "round";
-  [0, 1, 2].forEach((i) => {
-    const prog = (((t / 6000 + i * 0.33) % 1.4) - 0.2);
-    const bx = sx - srx + prog * srx * 2;
-    const by = top + sry * (0.45 + i * 0.18) + Math.sin(t / 900 + i * 2) * 5;
-    const bs = sry * (0.12 - i * 0.015);
-    const flap = Math.sin(t / 130 + i * 1.7) * bs * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(bx - bs, by - flap);
-    ctx.quadraticCurveTo(bx - bs * 0.4, by - bs * 0.5 - flap * 0.5, bx, by);
-    ctx.quadraticCurveTo(bx + bs * 0.4, by - bs * 0.5 - flap * 0.5, bx + bs, by - flap);
-    ctx.stroke();
-  });
-  ctx.restore();
-  ctx.beginPath();
-  ctx.ellipse(sx, sy, srx, sry, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-}
-
-// Low side table for the TV
-function drawTVTable(ctx, x, floor, tw, th) {
-  const top = floor - th;
-  for (const dir of [-1, 1]) {
-    wobblyPath(ctx, [[x + dir * tw * 0.4, top + 6], [x + dir * tw * 0.46, floor - th * 0.4], [x + dir * tw * 0.42, floor], [x + dir * tw * 0.32, floor], [x + dir * tw * 0.33, top + 6]], true, dir + 20);
-    outline(ctx, "#f3a6b8");
-  }
-  roundRect(ctx, x - tw / 2, top, tw, 12, 6);
-  outline(ctx, "#e8c89a", 2.6);
 }
 
 function drawTable(ctx, x, floor, tw, th, t) {
@@ -359,9 +220,5 @@ export function drawFurniture(ctx, w, h, floor, sprites, t, drawOutside) {
   drawFrame(ctx, sprites.jellyking, w * 0.2, h * 0.32, fw * 0.95, 0.04);
   drawFrame(ctx, sprites.fish, w * 0.15, h * 0.46, fw * 0.7, 0.03);
 
-  const tvW = Math.min(170, w * 0.17);
-  const tvTableH = h * 0.13;
-  drawTVTable(ctx, w * 0.9, floor, tvW * 0.8, tvTableH);
-  drawTV(ctx, sprites, w * 0.9, floor - tvTableH, tvW, t);
   drawTable(ctx, w * 0.5, floor, Math.min(150, w * 0.16), h * 0.17, t);
 }
