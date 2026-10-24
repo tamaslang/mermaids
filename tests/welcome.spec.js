@@ -9,7 +9,9 @@ test("welcome screen loads without errors", async ({ page }) => {
   expect(response.ok()).toBeTruthy();
   await expect(page).toHaveTitle("Mermaids");
   await expect(page.locator("h1")).toHaveText("Mermaids");
-  await expect(page.getByRole("img", { name: "A mermaid" })).toBeVisible();
+  const queen = page.getByRole("img", { name: "A mermaid" });
+  await expect(queen).toBeVisible();
+  await expect.poll(() => queen.evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
   await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
   await expect(page.locator("#ocean")).toBeVisible();
   expect(errors).toEqual([]);
@@ -40,3 +42,14 @@ test("ocean canvas is painted", async ({ page }) => {
   });
   expect(painted).toBe(true);
 });
+
+for (const size of [{ width: 1100, height: 640 }, { width: 400, height: 800 }]) {
+  test(`welcome content is horizontally centred at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    for (const sel of ["h1", ".queen", "#start"]) {
+      const box = await page.locator(sel).boundingBox();
+      expect(Math.abs(box.x + box.width / 2 - size.width / 2), sel).toBeLessThan(2);
+    }
+  });
+}
