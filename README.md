@@ -10,7 +10,7 @@ Open http://localhost:4174.
 
 ## Controls
 
-Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit. Hold B to blow bubbles; press H near an animal to say hello.
+Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit. Hold B to blow bubbles; press H near an animal to say hello. Swim east to the RACE cave and press Enter to start a hoop race: swim through every hoop (they vanish) and pop bubbles for bonus points; Enter returns to the sea.
 
 ## Test
 

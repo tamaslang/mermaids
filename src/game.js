@@ -1,6 +1,7 @@
 import { createCritters, updateCritters, drawCritters, drawCritterSpeech, nearestCritter, greet } from "./critters.js";
 import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
+import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -44,7 +45,31 @@ export function nearSofa(state) {
   return sofas.findIndex((f) => Math.abs(f.x - state.x) < sofaW * 0.6 && state.y > state.height * 0.45);
 }
 
+export function nearRace(state) {
+  return state.mode === "sea" && Math.abs(RACE_X - state.scroll - state.x) < raceCaveWidth(state.height) * 0.3;
+}
+
+function leaveTo(state, worldX) {
+  state.mode = "sea";
+  state.sitting = null;
+  state.race = null;
+  state.vx = state.vy = 0;
+  state.scroll = Math.max(0, worldX - state.width * 0.5);
+  state.x = worldX - state.scroll;
+}
+
 export function toggleDoor(state) {
+  if (state.mode === "race") { leaveTo(state, RACE_X); return; }
+  if (state.mode === "sea" && nearRace(state)) {
+    state.mode = "race";
+    state.race = createRace();
+    state.scroll = 0;
+    state.x = state.width * 0.2;
+    state.y = state.height / 2;
+    state.vx = state.vy = 0;
+    state.facing = 1;
+    return;
+  }
   if (state.mode === "sea") {
     if (!nearDoor(state)) return;
     state.mode = "home";
@@ -53,11 +78,7 @@ export function toggleDoor(state) {
     state.vx = state.vy = 0;
     state.facing = 1;
   } else {
-    state.mode = "sea";
-    state.sitting = null;
-    state.vx = state.vy = 0;
-    state.scroll = Math.max(0, HOME_X - state.width * 0.5);
-    state.x = HOME_X - state.scroll;
+    leaveTo(state, HOME_X);
   }
 }
 
@@ -139,7 +160,8 @@ export function step(state, keys, dt) {
   state.turn += (state.facing - state.turn) * Math.min(1, TURN_RATE * dt);
   if (Math.abs(state.facing - state.turn) < 0.01) state.turn = state.facing;
 
-  if (state.mode === "sea") state.scroll = Math.max(0, state.scroll + (state.vx / SPEED) * WORLD_SPEED * dt);
+  if (state.mode === "sea" || state.mode === "race") state.scroll = Math.max(0, state.scroll + (state.vx / SPEED) * WORLD_SPEED * dt);
+  if (state.mode === "race") updateRace(state, dt);
 }
 
 // Keep the mermaid at the same relative spot when the screen size changes.
@@ -259,9 +281,12 @@ export function startGame(canvas, sprites) {
     drawKelp(ctx, w, h);
 
     // The mermaid's home: a coral reef with a doorway
-    const rw = reefWidth(h);
-    const rh = rw * (sprites.reef.height / sprites.reef.width);
-    ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
+    if (state.mode === "sea") {
+      const rw = reefWidth(h);
+      const rh = rw * (sprites.reef.height / sprites.reef.width);
+      ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
+      drawRaceCave(ctx, RACE_X - state.scroll, h);
+    }
 
     drawWeeds(ctx, w, h);
 
@@ -271,7 +296,11 @@ export function startGame(canvas, sprites) {
       const fade = Math.min(1, (SAY_FOR - state.say.age) / 0.4);
       drawSpeech(ctx, state.x, state.y - spriteWidth(h) * 0.3, state.say.text, fade);
     }
-    if (nearDoor(state)) hint("Press Enter to go home");
+    if (state.mode === "race") {
+      drawRace(ctx, state, w, h);
+      hint(state.race.done ? `Finished in ${state.race.time.toFixed(1)}s! Press Enter to return to the sea` : "Swim through every hoop · Enter quits the race");
+    } else if (nearRace(state)) hint("Press Enter to start the race");
+    else if (nearDoor(state)) hint("Press Enter to go home");
   }
 
   // What the window shows: the sea outside the front door, in the same coordinates as the main view.
