@@ -2,6 +2,7 @@ import { createCritters, updateCritters, drawCritters, drawCritterSpeech, neares
 import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
+import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -25,7 +26,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null };
 }
 
 export function nearDoor(state) {
@@ -49,6 +50,28 @@ export function nearRace(state) {
   return state.mode === "sea" && Math.abs(RACE_X - state.scroll - state.x) < raceCaveWidth(state.height) * 0.3;
 }
 
+export function nearBakery(state) {
+  return state.mode === "sea" && Math.abs(BAKERY_X - state.scroll - state.x) < bakeryWidth(state.height) * 0.3;
+}
+
+// T picks up the pastry in front of the mermaid; one at a time.
+export function takePastry(state) {
+  if (state.mode !== "bakery") return;
+  const i = nearPastry(state);
+  if (i < 0) return;
+  if (state.held) { state.ladySay = { text: "Eat that one first, dear!", age: 0 }; return; }
+  state.held = PASTRIES[i];
+  state.ladySay = { text: "Enjoy, sweetie!", age: 0 };
+}
+
+export function eatPastry(state) {
+  if (!state.held) return false;
+  state.held = null;
+  state.eaten++;
+  state.say = { text: "Yum!", age: 0 };
+  return true;
+}
+
 function leaveTo(state, worldX) {
   state.mode = "sea";
   state.sitting = null;
@@ -60,6 +83,15 @@ function leaveTo(state, worldX) {
 
 export function toggleDoor(state) {
   if (state.mode === "race") { leaveTo(state, RACE_X); return; }
+  if (state.mode === "bakery") { leaveTo(state, BAKERY_X); return; }
+  if (nearBakery(state)) {
+    state.mode = "bakery";
+    state.x = margins(state.height).mx + 20;
+    state.y = bakeryLayout(state.width, state.height).floor - state.height * 0.12;
+    state.vx = state.vy = 0;
+    state.facing = 1;
+    return;
+  }
   if (state.mode === "sea" && nearRace(state)) {
     state.mode = "race";
     state.race = createRace();
@@ -120,6 +152,10 @@ function updatePuffs(state, keys, dt) {
     p.x += p.vx * dt + Math.sin(p.age * 6 + p.phase) * 0.4;
   }
   state.puffs = state.puffs.filter((p) => p.age < p.life);
+  if (state.ladySay) {
+    state.ladySay.age += dt;
+    if (state.ladySay.age > SAY_FOR) state.ladySay = null;
+  }
   if (state.say) {
     state.say.age += dt;
     if (state.say.age > SAY_FOR) state.say = null;
@@ -204,7 +240,8 @@ export function startGame(canvas, sprites) {
 
   const onDown = (e) => {
     if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) toggleDoor(state); return; }
-    if ((e.key === "e" || e.key === "E") && !e.repeat) { toggleSit(state); return; }
+    if ((e.key === "t" || e.key === "T") && !e.repeat) { takePastry(state); return; }
+    if ((e.key === "e" || e.key === "E") && !e.repeat) { if (!eatPastry(state)) toggleSit(state); return; }
     if ((e.key === "h" || e.key === "H") && !e.repeat) {
       const c = state.mode === "sea" ? nearestCritter(critters, state.x, state.y, canvas.width) : null;
       if (c) { state.say = { text: "Hello!", age: 0 }; greet(c, state.x); }
@@ -286,6 +323,7 @@ export function startGame(canvas, sprites) {
       const rh = rw * (sprites.reef.height / sprites.reef.width);
       ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
       drawRaceCave(ctx, RACE_X - state.scroll, h);
+      drawBakeryEntrance(ctx, BAKERY_X - state.scroll, h);
     }
 
     drawWeeds(ctx, w, h);
@@ -300,6 +338,7 @@ export function startGame(canvas, sprites) {
       drawRace(ctx, state, w, h);
       hint(state.race.done ? `Finished in ${state.race.time.toFixed(1)}s! Press Enter to return to the sea` : "Swim through every hoop · Enter quits the race");
     } else if (nearRace(state)) hint("Press Enter to start the race");
+    else if (nearBakery(state)) hint("Press Enter to visit the bakery");
     else if (nearDoor(state)) hint("Press Enter to go home");
   }
 
@@ -343,6 +382,24 @@ export function startGame(canvas, sprites) {
     else hint("Press Enter to leave home");
   }
 
+  function drawBakeryMode(dt) {
+    const { width: w, height: h } = canvas;
+    const L = bakeryLayout(w, h);
+    drawCave(ctx, w, h, L.floor);
+    updateCritters(critters, dt, 0, w, h);
+    drawBubbles(dt);
+    drawBakery(ctx, state, w, h, performance.now());
+    drawMermaid(Math.sin(performance.now() / 500) * 3);
+    if (state.ladySay) {
+      const p = ladySpot(w, h);
+      drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
+    }
+    if (state.say) drawSpeech(ctx, state.x, state.y - spriteWidth(h) * 0.3, state.say.text, Math.min(1, (SAY_FOR - state.say.age) / 0.4));
+    if (state.held) hint("Press E to eat your pastry");
+    else if (nearPastry(state) >= 0) hint("Press T to take this pastry");
+    else hint("Swim to a pastry · Enter leaves the bakery");
+  }
+
   function drawPuffs() {
     ctx.save();
     for (const p of state.puffs) {
@@ -381,10 +438,14 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
     }
     ctx.restore();
+    if (state.held && state.sitting === null) {
+      drawPastry(ctx, state.held, state.x + state.facing * sw * 0.36, state.y + sw * 0.05, sw * 0.2);
+    }
   }
 
   function draw(dt) {
     if (state.mode === "home") drawHome(dt);
+    else if (state.mode === "bakery") drawBakeryMode(dt);
     else drawSea(dt);
   }
 
