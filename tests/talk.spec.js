@@ -26,6 +26,7 @@ test("H says hello to a nearby animal, who says hello back a moment later", asyn
     const g = window.__game;
     const c = g.critters[0];
     c.wait = 0;
+    c.speed = 0;
     c.x = g.state.x + 120;
     c.y = g.state.y;
   });
