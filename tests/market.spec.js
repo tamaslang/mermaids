@@ -121,3 +121,24 @@ test("T far from any shelf item takes nothing", async ({ page }) => {
   await page.keyboard.press("t");
   expect((await shop(page)).basket).toEqual([]);
 });
+
+test("the basket HUD draws the items you took, not just a count", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await start(page);
+  await enterMarket(page);
+  const hudInk = () => page.evaluate(() => {
+    const c = document.querySelector("#game-canvas");
+    const d = c.getContext("2d").getImageData(0, 0, Math.min(c.width, 600), Math.round(c.height * 0.1)).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] < 120) n++; // strawberry/jam reds
+    return n;
+  });
+  await page.waitForTimeout(150);
+  const before = await hudInk();
+  await park(page, "strawberry");
+  await page.keyboard.press("t");
+  await page.waitForTimeout(150);
+  expect(await hudInk()).toBeGreaterThan(before);
+  expect(errors).toEqual([]);
+});

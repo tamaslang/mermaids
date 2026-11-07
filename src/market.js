@@ -456,7 +456,25 @@ export function drawMarketHud(ctx, state, w, h) {
   ctx.font = `${Math.round(Math.max(16, h * 0.035))}px ${FONT}`;
   ctx.textAlign = "left";
   ctx.fillStyle = "#444";
-  ctx.fillText(`Basket: ${state.basket.length}`, 20, h * 0.06);
+  ctx.fillText("Basket:", 20, h * 0.06);
+  const counts = {};
+  for (const id of state.basket) counts[id] = (counts[id] || 0) + 1;
+  const ids = Object.keys(counts);
+  if (!ids.length) {
+    ctx.fillText("empty", 20 + ctx.measureText("Basket: ").width, h * 0.06);
+  } else {
+    const size = Math.max(30, h * 0.06);
+    let x = 20 + ctx.measureText("Basket: ").width + size * 0.6;
+    ctx.textBaseline = "middle";
+    for (const id of ids) {
+      drawItemIcon(ctx, id, x, h * 0.06 - 6, size);
+      if (counts[id] > 1) {
+        ctx.textAlign = "left";
+        ctx.fillText(`×${counts[id]}`, x + size * 0.45, h * 0.06 - 6);
+      }
+      x += size * (counts[id] > 1 ? 1.9 : 1.3);
+    }
+  }
   ctx.restore();
 }
 
