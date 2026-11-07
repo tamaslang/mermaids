@@ -4,6 +4,7 @@ import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
 import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
+import { moveSelection, useItem, updateMagic, drawMagic, drawMagicHud } from "./magic.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -27,7 +28,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
 }
 
 export function nearDoor(state) {
@@ -194,8 +195,8 @@ export function step(state, keys, dt) {
   }
   const len = Math.hypot(dx, dy) || 1;
   const ease = Math.min(1, ACCEL * dt);
-  state.vx += ((dx / len) * SPEED - state.vx) * ease;
-  state.vy += ((dy / len) * SPEED - state.vy) * ease;
+  state.vx += ((dx / len) * SPEED * (state.speedMul || 1) - state.vx) * ease;
+  state.vy += ((dy / len) * SPEED * (state.speedMul || 1) - state.vy) * ease;
   if (!dx && Math.abs(state.vx) < 1) state.vx = 0;
   if (!dy && Math.abs(state.vy) < 1) state.vy = 0;
 
@@ -255,6 +256,12 @@ export function startGame(canvas, sprites) {
   let running = true;
 
   const onDown = (e) => {
+    if (state.inventoryOpen) {
+      const up = e.key === "ArrowUp" || e.key === "w" || e.key === "W";
+      const down = e.key === "ArrowDown" || e.key === "s" || e.key === "S";
+      if (up || down) { e.preventDefault(); moveSelection(state, up ? -1 : 1); state.invMsg = null; return; }
+      if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) useItem(state, critters); return; }
+    }
     if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) toggleDoor(state); return; }
     if ((e.key === "i" || e.key === "I") && !e.repeat) { state.inventoryOpen = !state.inventoryOpen; return; }
     if ((e.key === "p" || e.key === "P") && !e.repeat) { payBasket(state); return; }
@@ -348,6 +355,7 @@ export function startGame(canvas, sprites) {
     drawWeeds(ctx, w, h);
 
     drawMermaid(Math.sin(state.scroll / 40) * 3);
+    drawMagic(ctx, state, w, h);
     drawCritterSpeech(ctx, critters);
     if (state.say) {
       const fade = Math.min(1, (SAY_FOR - state.say.age) / 0.4);
@@ -487,6 +495,7 @@ export function startGame(canvas, sprites) {
     else if (state.mode === "bakery") drawBakeryMode(dt);
     else if (state.mode === "market") drawMarketMode(dt);
     else drawSea(dt);
+    drawMagicHud(ctx, state, canvas.width, canvas.height);
     if (state.inventoryOpen) drawInventory(ctx, state, canvas.width, canvas.height);
   }
 
@@ -494,6 +503,7 @@ export function startGame(canvas, sprites) {
     if (!running) return;
     const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
     step(state, keys, dt);
+    updateMagic(state, critters, dt, canvas.width, canvas.height);
     last = now;
     draw(dt);
     requestAnimationFrame(frame);

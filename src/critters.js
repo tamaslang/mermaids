@@ -81,9 +81,22 @@ export function drawCritters(ctx, list, sprites, t) {
     const ch = c.w * (img.height / img.width);
     const bob = c.kind === "crab" ? 0 : Math.sin(t / 700 + c.speed) * 4;
     ctx.save();
-    ctx.translate(c.x, c.y + bob);
+    const fx = c.fx || {};
+    ctx.translate(c.x + (fx.dx || 0), c.y + bob + (fx.dy || 0));
+    if (fx.rot) ctx.rotate(fx.rot);
     if (c.dir < 0) ctx.scale(-1, 1);
+    if (fx.sx) ctx.scale(fx.sx, fx.sy);
     ctx.drawImage(img, -c.w / 2, -ch / 2, c.w, ch);
+    if (fx.hoop !== undefined) {
+      ctx.beginPath();
+      ctx.ellipse(0, ch * 0.1, c.w * 0.6, c.w * 0.13 * (1.2 + Math.sin(fx.hoop)), 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "#f3a6b8";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.strokeStyle = "#4a4a4a";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
     ctx.restore();
   }
 }

@@ -501,6 +501,12 @@ export function drawInventory(ctx, state, w, h) {
   if (!ids.length) ctx.fillText("Nothing yet. Visit Mermarket!", w / 2, y + 90);
   ids.forEach((id, i) => {
     const ry = y + 92 + i * rowH;
+    if (i === Math.min(state.invSel || 0, ids.length - 1)) {
+      ctx.beginPath();
+      ctx.roundRect(x + 14, ry - rowH / 2 + 4, pw - 28, rowH - 8, 10);
+      outline(ctx, "#f7d6cb", 2);
+      ctx.fillStyle = INK;
+    }
     drawItemIcon(ctx, id, x + 50, ry, 34);
     ctx.textAlign = "left";
     ctx.fillText(ITEMS[id].name, x + 100, ry);
@@ -509,6 +515,6 @@ export function drawInventory(ctx, state, w, h) {
   });
   ctx.textAlign = "center";
   ctx.font = `${16}px ${FONT}`;
-  ctx.fillText("Press I to close", w / 2, y + ph - 16);
+  ctx.fillText(state.invMsg || (ids.length ? "↑↓ choose · Enter use magic · I close" : "Press I to close"), w / 2, y + ph - 16);
   ctx.restore();
 }
