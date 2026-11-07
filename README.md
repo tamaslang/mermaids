@@ -10,7 +10,7 @@ Open http://localhost:4174.
 
 ## Controls
 
-Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit. Hold B to blow bubbles; press H near an animal to say hello. Swim east to the RACE cave and press Enter to start a hoop race: swim through every hoop (they vanish) and pop bubbles for bonus points; Enter returns to the sea. Visit the croissant-shaped BAKERY further east: swim in front of a pastry and press T to take it, then E to eat it. Still further east is MERMARKET: press Enter at the hill-shaped cave to browse the octopus's shop (strawberries, carrots, jam, a jellyfish under glass).
+Arrow keys / WASD swim, Space does a flip. Swim to the coral reef and press Enter to go home (Enter again leaves); inside, press E near a sofa to sit. Hold B to blow bubbles; press H near an animal to say hello. Swim east to the RACE cave and press Enter to start a hoop race: swim through every hoop (they vanish) and pop bubbles for bonus points; Enter returns to the sea. Visit the croissant-shaped BAKERY further east: swim in front of a pastry and press T to take it, then E to eat it. Still further east is MERMARKET: press Enter at the hill-shaped cave to browse the octopus's shop (strawberries, carrots, jam, a jellyfish under glass). Press T near something to put it in your basket, walk to the counter and press P to pay (no money, it just moves to your inventory), and press I anywhere to open the inventory. Unpaid things go back on the shelves when you leave.
 
 ## Test
 

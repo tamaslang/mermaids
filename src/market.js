@@ -213,28 +213,6 @@ function drawCandyBowl(ctx, x, floor, s) {
   ctx.stroke();
 }
 
-function drawBunny(ctx, x, floor, s) {
-  const y = floor - s * 0.3;
-  ctx.beginPath();
-  ctx.ellipse(x - s * 0.28, y - s * 0.28, s * 0.09, s * 0.26, -0.3, 0, Math.PI * 2);
-  outline(ctx, "#f3a6b8", 2);
-  ctx.beginPath();
-  ctx.ellipse(x - s * 0.08, y - s * 0.3, s * 0.09, s * 0.26, 0.2, 0, Math.PI * 2);
-  outline(ctx, "#f3a6b8", 2);
-  ctx.beginPath();
-  ctx.ellipse(x, y, s * 0.4, s * 0.3, 0, 0, Math.PI * 2);
-  outline(ctx, "#fff1ee", 2.2);
-  ctx.beginPath();
-  ctx.arc(x + s * 0.32, y + s * 0.02, s * 0.12, 0, Math.PI * 2);
-  outline(ctx, "#fff1ee", 2);
-  ctx.fillStyle = "#e8403a";
-  for (const dx of [-0.1, 0.1]) {
-    ctx.beginPath();
-    ctx.arc(x - s * 0.1 + s * dx, y - s * 0.04, s * 0.025, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 export function drawMarket(ctx, state, w, h, t) {
   const L = marketLayout(w, h);
   const s = Math.min(1.2, w / 1000);
@@ -276,7 +254,6 @@ export function drawMarket(ctx, state, w, h, t) {
   drawJellyDome(ctx, w * 0.6, L.shelfJelly, 100 * s, t);
 
   drawCandyBowl(ctx, w * 0.4, L.floor, 130 * s);
-  drawBunny(ctx, w * 0.12, L.floor, 110 * s);
 
   // Octopus seller behind a pearl-trimmed counter
   drawOctopus(ctx, L.sellerX, L.counter.top + 30, Math.min(180, h * 0.3), t);
@@ -373,5 +350,147 @@ export function drawMarketEntrance(ctx, x, h) {
   ctx.quadraticCurveTo(x + cw * 0.04, signY - cw * 0.2, x + cw * 0.08, signY - cw * 0.14);
   ctx.quadraticCurveTo(x + cw * 0.09, signY - cw * 0.08, x + cw * 0.02, signY - cw * 0.06);
   outline(ctx, "#f3a6b8", 2);
+  ctx.restore();
+}
+
+export const ITEMS = {
+  strawberry: { name: "Strawberry" },
+  carrot: { name: "Carrot" },
+  jamRed: { name: "Strawberry jam" },
+  jamPurple: { name: "Grape jam" },
+  jamPink: { name: "Rose jam" },
+  jamYellow: { name: "Mango jam" },
+  candy: { name: "Pearl candy" },
+  jelly: { name: "Jellyfish" },
+};
+
+// What can be taken from the shelves, and where it sits (same coordinates as drawMarket).
+export function marketItems(w, h) {
+  const L = marketLayout(w, h);
+  const s = Math.min(1.2, w / 1000);
+  const jams = ["jamRed", "jamPurple", "jamPink", "jamYellow"];
+  return [
+    { id: "strawberry", x: w * 0.23, y: L.shelfTop - 80 * s },
+    { id: "carrot", x: w * 0.44, y: L.shelfTop - 55 * s },
+    ...jams.map((id, i) => ({ id, x: w * 0.09 + i * w * 0.085, y: L.shelfMid - 35 * s })),
+    { id: "candy", x: w * 0.4, y: L.floor - 110 * s },
+    { id: "jelly", x: w * 0.6, y: L.shelfJelly - 45 * s },
+  ];
+}
+
+export function nearItem(state) {
+  if (state.mode !== "market") return null;
+  let best = null;
+  let bestD = Math.max(70, state.width * 0.07);
+  for (const it of marketItems(state.width, state.height)) {
+    const d = Math.hypot(it.x - state.x, it.y - state.y);
+    if (d < bestD) { best = it; bestD = d; }
+  }
+  return best;
+}
+
+export function nearTill(state) {
+  if (state.mode !== "market") return false;
+  const { counter } = marketLayout(state.width, state.height);
+  return state.x > counter.x0 - 60 && state.y > counter.top - state.height * 0.3;
+}
+
+export function takeItem(state) {
+  const it = nearItem(state);
+  if (!it) return false;
+  state.basket.push(it.id);
+  state.ladySay = { text: `${ITEMS[it.id].name} in your basket!`, age: 0 };
+  return true;
+}
+
+// Paying has no money: the basket simply moves into the inventory.
+export function payBasket(state) {
+  if (!nearTill(state)) return false;
+  if (!state.basket.length) {
+    state.ladySay = { text: "Your basket is empty!", age: 0 };
+    return false;
+  }
+  for (const id of state.basket) state.inventory[id] = (state.inventory[id] || 0) + 1;
+  state.basket = [];
+  state.ladySay = { text: "Thank you, come again!", age: 0 };
+  return true;
+}
+
+export function drawItemIcon(ctx, id, x, y, s) {
+  ctx.save();
+  if (id === "strawberry") strawberry(ctx, x, y, s * 0.9);
+  else if (id === "carrot") carrot(ctx, x, y + s * 0.5, s, 0);
+  else if (id.startsWith("jam")) jar(ctx, x, y + s * 0.45, s, { jamRed: "#e8403a", jamPurple: "#c99ae0", jamPink: "#f3a6b8", jamYellow: "#ffd36b" }[id], "Jam");
+  else if (id === "candy") {
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.42, 0, Math.PI * 2);
+    outline(ctx, "#f3a6b8", 2);
+    pearl(ctx, x - s * 0.1, y - s * 0.1, s * 0.16);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.32, y + s * 0.1);
+    ctx.quadraticCurveTo(x - s * 0.34, y - s * 0.4, x, y - s * 0.4);
+    ctx.quadraticCurveTo(x + s * 0.34, y - s * 0.4, x + s * 0.32, y + s * 0.1);
+    ctx.closePath();
+    outline(ctx, "#fff0a8");
+    ctx.beginPath();
+    for (const dx of [-0.16, 0, 0.16]) { ctx.moveTo(x + s * dx, y + s * 0.1); ctx.lineTo(x + s * dx, y + s * 0.4); }
+    outline(ctx, null, 1.8);
+  }
+  ctx.restore();
+}
+
+export function drawMarketHud(ctx, state, w, h) {
+  const it = nearItem(state);
+  if (it) {
+    ctx.save();
+    ctx.strokeStyle = "#e8403a";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.arc(it.x, it.y, Math.max(34, w * 0.035), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.font = `${Math.round(Math.max(16, h * 0.035))}px ${FONT}`;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#444";
+  ctx.fillText(`Basket: ${state.basket.length}`, 20, h * 0.06);
+  ctx.restore();
+}
+
+// The inventory page: a paper card listing everything paid for.
+export function drawInventory(ctx, state, w, h) {
+  const pw = Math.min(520, w * 0.8);
+  const ids = Object.keys(state.inventory);
+  const rowH = 54;
+  const ph = Math.min(h * 0.9, 110 + Math.max(1, ids.length) * rowH);
+  const x = (w - pw) / 2;
+  const y = (h - ph) / 2;
+  ctx.save();
+  ctx.fillStyle = "rgba(60,50,70,0.25)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.beginPath();
+  ctx.roundRect(x, y, pw, ph, 14);
+  outline(ctx, "#fffdf5", 3);
+  ctx.fillStyle = INK;
+  ctx.font = `bold ${Math.round(28)}px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Inventory", w / 2, y + 36);
+  ctx.font = `${22}px ${FONT}`;
+  if (!ids.length) ctx.fillText("Nothing yet. Visit Mermarket!", w / 2, y + 90);
+  ids.forEach((id, i) => {
+    const ry = y + 92 + i * rowH;
+    drawItemIcon(ctx, id, x + 50, ry, 34);
+    ctx.textAlign = "left";
+    ctx.fillText(ITEMS[id].name, x + 100, ry);
+    ctx.textAlign = "right";
+    ctx.fillText(`×${state.inventory[id]}`, x + pw - 36, ry);
+  });
+  ctx.textAlign = "center";
+  ctx.font = `${16}px ${FONT}`;
+  ctx.fillText("Press I to close", w / 2, y + ph - 16);
   ctx.restore();
 }

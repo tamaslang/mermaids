@@ -3,7 +3,7 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
-import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot } from "./market.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -27,7 +27,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false };
 }
 
 export function nearDoor(state) {
@@ -78,6 +78,7 @@ export function eatPastry(state) {
 }
 
 function leaveTo(state, worldX) {
+  state.basket = []; // unpaid things go back on the shelves
   state.mode = "sea";
   state.sitting = null;
   state.race = null;
@@ -255,7 +256,9 @@ export function startGame(canvas, sprites) {
 
   const onDown = (e) => {
     if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) toggleDoor(state); return; }
-    if ((e.key === "t" || e.key === "T") && !e.repeat) { takePastry(state); return; }
+    if ((e.key === "i" || e.key === "I") && !e.repeat) { state.inventoryOpen = !state.inventoryOpen; return; }
+    if ((e.key === "p" || e.key === "P") && !e.repeat) { payBasket(state); return; }
+    if ((e.key === "t" || e.key === "T") && !e.repeat) { if (state.mode === "market") takeItem(state); else takePastry(state); return; }
     if ((e.key === "e" || e.key === "E") && !e.repeat) { if (!eatPastry(state)) toggleSit(state); return; }
     if ((e.key === "h" || e.key === "H") && !e.repeat) {
       const c = state.mode === "sea" ? nearestCritter(critters, state.x, state.y, canvas.width) : null;
@@ -411,7 +414,11 @@ export function startGame(canvas, sprites) {
       const p = sellerSpot(w, h);
       drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
     }
-    hint("Enter leaves Mermarket");
+    drawMarketHud(ctx, state, w, h);
+    const it = nearItem(state);
+    if (nearTill(state)) hint(state.basket.length ? "Press P to pay" : "Take things with T, then pay here");
+    else if (it) hint("Press T to put it in your basket");
+    else hint("Enter leaves Mermarket · I opens inventory");
   }
 
   function drawBakeryMode(dt) {
@@ -480,6 +487,7 @@ export function startGame(canvas, sprites) {
     else if (state.mode === "bakery") drawBakeryMode(dt);
     else if (state.mode === "market") drawMarketMode(dt);
     else drawSea(dt);
+    if (state.inventoryOpen) drawInventory(ctx, state, canvas.width, canvas.height);
   }
 
   function frame(now) {
