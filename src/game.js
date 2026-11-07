@@ -3,6 +3,7 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot } from "./market.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -50,6 +51,10 @@ export function nearRace(state) {
   return state.mode === "sea" && Math.abs(RACE_X - state.scroll - state.x) < raceCaveWidth(state.height) * 0.3;
 }
 
+export function nearMarket(state) {
+  return state.mode === "sea" && Math.abs(MARKET_X - state.scroll - state.x) < marketWidth(state.height) * 0.3;
+}
+
 export function nearBakery(state) {
   return state.mode === "sea" && Math.abs(BAKERY_X - state.scroll - state.x) < bakeryWidth(state.height) * 0.3;
 }
@@ -84,6 +89,16 @@ function leaveTo(state, worldX) {
 export function toggleDoor(state) {
   if (state.mode === "race") { leaveTo(state, RACE_X); return; }
   if (state.mode === "bakery") { leaveTo(state, BAKERY_X); return; }
+  if (state.mode === "market") { leaveTo(state, MARKET_X); return; }
+  if (nearMarket(state)) {
+    state.mode = "market";
+    state.x = margins(state.height).mx + 20;
+    state.y = marketLayout(state.width, state.height).floor - state.height * 0.12;
+    state.vx = state.vy = 0;
+    state.facing = 1;
+    state.ladySay = { text: "Welcome to Mermarket!", age: 0 };
+    return;
+  }
   if (nearBakery(state)) {
     state.mode = "bakery";
     state.x = margins(state.height).mx + 20;
@@ -324,6 +339,7 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
       drawRaceCave(ctx, RACE_X - state.scroll, h);
       drawBakeryEntrance(ctx, BAKERY_X - state.scroll, h);
+      drawMarketEntrance(ctx, MARKET_X - state.scroll, h);
     }
 
     drawWeeds(ctx, w, h);
@@ -339,6 +355,7 @@ export function startGame(canvas, sprites) {
       hint(state.race.done ? `Finished in ${state.race.time.toFixed(1)}s! Press Enter to return to the sea` : "Swim through every hoop · Enter quits the race");
     } else if (nearRace(state)) hint("Press Enter to start the race");
     else if (nearBakery(state)) hint("Press Enter to visit the bakery");
+    else if (nearMarket(state)) hint("Press Enter to visit Mermarket");
     else if (nearDoor(state)) hint("Press Enter to go home");
   }
 
@@ -380,6 +397,21 @@ export function startGame(canvas, sprites) {
     if (state.sitting !== null) hint("Enter leaves home, any arrow stands up");
     else if (nearSofa(state) >= 0) hint("Press E to sit");
     else hint("Press Enter to leave home");
+  }
+
+  function drawMarketMode(dt) {
+    const { width: w, height: h } = canvas;
+    const L = marketLayout(w, h);
+    drawCave(ctx, w, h, L.floor);
+    updateCritters(critters, dt, 0, w, h);
+    drawBubbles(dt);
+    drawMarket(ctx, state, w, h, performance.now());
+    drawMermaid(Math.sin(performance.now() / 500) * 3);
+    if (state.ladySay) {
+      const p = sellerSpot(w, h);
+      drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
+    }
+    hint("Enter leaves Mermarket");
   }
 
   function drawBakeryMode(dt) {
@@ -446,6 +478,7 @@ export function startGame(canvas, sprites) {
   function draw(dt) {
     if (state.mode === "home") drawHome(dt);
     else if (state.mode === "bakery") drawBakeryMode(dt);
+    else if (state.mode === "market") drawMarketMode(dt);
     else drawSea(dt);
   }
 
