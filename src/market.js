@@ -10,7 +10,7 @@ export function marketLayout(w, h) {
   const floor = h * 0.86;
   const x0 = w * 0.62;
   const x1 = w * 0.96;
-  return { floor, counter: { x0, x1, top: floor - h * 0.2 }, sellerX: (x0 + x1) / 2, shelfTop: h * 0.38, shelfMid: h * 0.58, shelfJelly: h * 0.5 };
+  return { floor, counter: { x0, x1, top: floor - h * 0.2 }, sellerX: (x0 + x1) / 2, shelfTop: h * 0.38, shelfMid: h * 0.58, shelfJelly: h * 0.42 };
 }
 
 function outline(ctx, fill, lw = 2.2) {
@@ -273,7 +273,7 @@ export function drawMarket(ctx, state, w, h, t) {
   [["#e8403a", "Jam"], ["#c99ae0", "Jam"], ["#f3a6b8", "Jam"], ["#ffd36b", "Jam"]].forEach(([c, l], i) => jar(ctx, w * 0.09 + i * w * 0.085, midY, 62 * s, c, l));
 
   // Jellyfish under glass, upper right
-  drawJellyDome(ctx, w * 0.73, L.shelfJelly, 100 * s, t);
+  drawJellyDome(ctx, w * 0.6, L.shelfJelly, 100 * s, t);
 
   drawCandyBowl(ctx, w * 0.4, L.floor, 130 * s);
   drawBunny(ctx, w * 0.12, L.floor, 110 * s);
