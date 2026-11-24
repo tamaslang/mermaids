@@ -170,7 +170,7 @@ test("a basket waits at the entrance: A picks it up, and without it T takes noth
   expect((await shop(page)).basket).toEqual(["strawberry"]);
 
   await page.keyboard.press("Enter");
-  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+  expect(await page.evaluate(() => ({ h: window.__game.state.hasBasket, b: window.__game.state.basket }))).toEqual({ h: true, b: [] });
   expect(errors).toEqual([]);
 });
 

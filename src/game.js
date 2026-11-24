@@ -28,7 +28,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, hasBasket: false, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, hasBasket: false, homeBasket: null, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
 }
 
 export function nearDoor(state) {
@@ -39,7 +39,30 @@ export function nearDoor(state) {
 export function homeLayout(w, h) {
   const sofaW = Math.min(260, w * 0.24);
   const floor = h * 0.86;
-  return { floor, sofaW, sofaH: sofaW * 0.6, sofas: [{ x: w * 0.3 }, { x: w * 0.7 }] };
+  return { floor, sofaW, sofaH: sofaW * 0.6, sofas: [{ x: w * 0.3 }, { x: w * 0.7 }], table: { x: w * 0.5, tw: Math.min(150, w * 0.16), top: floor - h * 0.17 } };
+}
+
+export function nearTable(state) {
+  if (state.mode !== "home") return false;
+  const { table } = homeLayout(state.width, state.height);
+  return Math.abs(table.x - state.x) < table.tw * 0.9 && state.y > state.height * 0.45 && state.sitting === null;
+}
+
+// Basket taken home: G sets it down on the table (with whatever is in it), A takes it again.
+export function putBasketOnTable(state) {
+  if (!nearTable(state) || !state.hasBasket) return false;
+  state.homeBasket = [...state.basket];
+  state.basket = [];
+  state.hasBasket = false;
+  return true;
+}
+
+export function takeBasketFromTable(state) {
+  if (!nearTable(state) || state.hasBasket || !state.homeBasket) return false;
+  state.basket = state.homeBasket;
+  state.homeBasket = null;
+  state.hasBasket = true;
+  return true;
 }
 
 export function nearSofa(state) {
@@ -79,7 +102,6 @@ export function eatPastry(state) {
 }
 
 function leaveTo(state, worldX) {
-  state.hasBasket = false;
   state.basket = []; // unpaid things go back on the shelves
   state.mode = "sea";
   state.sitting = null;
@@ -280,6 +302,8 @@ export function startGame(canvas, sprites) {
       return;
     }
     if ((e.key === "q" || e.key === "Q") && !e.repeat) { putBackBasket(state); return; }
+    if ((e.key === "g" || e.key === "G") && !e.repeat) { putBasketOnTable(state); return; }
+    if ((e.key === "a" || e.key === "A") && !e.repeat) takeBasketFromTable(state);
     if ((e.key === "a" || e.key === "A") && !e.repeat && (state.mode === "market" || state.mode === "bakery")) pickUpBasket(state);
     const k = KEY_MAP[e.key];
     if (k) { keys.add(k); e.preventDefault(); }
@@ -408,8 +432,14 @@ export function startGame(canvas, sprites) {
     drawFurniture(ctx, w, h, floor, sprites, performance.now(), drawOutside);
     drawBubbles(dt);
     sofas.forEach((f) => ctx.drawImage(sprites.sofa, f.x - sofaW / 2, floor - sofaH, sofaW, sofaH));
+    if (state.homeBasket) {
+      const { table } = homeLayout(w, h);
+      drawBasket(ctx, table.x + table.tw * 0.02, table.top, table.tw * 0.28, state.homeBasket);
+    }
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.sitting !== null) hint("Enter leaves home, any arrow stands up");
+    else if (nearTable(state) && state.hasBasket) hint("Press G to put the basket down");
+    else if (nearTable(state) && state.homeBasket) hint("Press A to pick the basket up");
     else if (nearSofa(state) >= 0) hint("Press E to sit");
     else hint("Press Enter to leave home");
   }
@@ -497,7 +527,7 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
     }
     ctx.restore();
-    if (state.hasBasket && (state.mode === "market" || state.mode === "bakery") && state.sitting === null) {
+    if (state.hasBasket && state.sitting === null) {
       drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.18, sw * 0.26, state.basket);
     }
     if (state.held && state.sitting === null) {
