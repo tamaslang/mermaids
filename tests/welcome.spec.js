@@ -90,3 +90,22 @@ test("a game state that started with no size recovers on resize", async ({ page 
   });
   expect(s).toEqual({ x: 200, y: 300 });
 });
+
+test("the game still starts when the browser refuses a canvas context at first", async ({ page }) => {
+  await page.addInitScript(() => {
+    const orig = HTMLCanvasElement.prototype.getContext;
+    let refused = 0;
+    HTMLCanvasElement.prototype.getContext = function (...args) {
+      if (this.id === "game-canvas" && refused < 5) { refused++; return null; }
+      return orig.apply(this, args);
+    };
+  });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Game" }).click();
+  await page.waitForFunction(() => window.__game);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__game.state.x)).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
