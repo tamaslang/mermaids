@@ -219,8 +219,9 @@ export function step(state, keys, dt) {
 
 // Keep the mermaid at the same relative spot when the screen size changes.
 export function resizeState(state, width, height) {
-  state.x = (state.x / state.width) * width;
-  state.y = (state.y / state.height) * height;
+  const ok = state.width > 0 && state.height > 0 && Number.isFinite(state.x) && Number.isFinite(state.y);
+  state.x = ok ? (state.x / state.width) * width : width * 0.25;
+  state.y = ok ? (state.y / state.height) * height : height / 2;
   state.width = width;
   state.height = height;
   const { mx, my } = margins(height);
@@ -502,6 +503,7 @@ export function startGame(canvas, sprites) {
   function frame(now) {
     if (!running) return;
     const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+    onResize();
     step(state, keys, dt);
     updateMagic(state, critters, dt, canvas.width, canvas.height);
     last = now;

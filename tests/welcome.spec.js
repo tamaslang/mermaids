@@ -65,3 +65,28 @@ test("controls legend is shown on the welcome screen and fits the viewport", asy
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
 });
+
+test("the mermaid is on screen even if the window is resized right as the game starts", async ({ page }) => {
+  await page.goto("/");
+  await page.setViewportSize({ width: 700, height: 500 });
+  await page.getByRole("button", { name: "Start Game" }).click();
+  await page.setViewportSize({ width: 900, height: 600 });
+  await page.waitForTimeout(300);
+  const s = await page.evaluate(() => { const g = window.__game.state; return { x: g.x, y: g.y, w: g.width, h: g.height }; });
+  expect(s.x).toBeGreaterThan(0);
+  expect(s.x).toBeLessThan(s.w);
+  expect(s.y).toBeGreaterThan(0);
+  expect(s.y).toBeLessThan(s.h);
+});
+
+test("a game state that started with no size recovers on resize", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Game" }).click();
+  const s = await page.evaluate(async () => {
+    const { createState, resizeState } = await import("/src/game.js");
+    const st = createState(0, 0);
+    resizeState(st, 800, 600);
+    return { x: st.x, y: st.y };
+  });
+  expect(s).toEqual({ x: 200, y: 300 });
+});

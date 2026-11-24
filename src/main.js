@@ -17,9 +17,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (welcome.hidden) return;
     welcome.hidden = true;
     playing.hidden = false;
-    gameCanvas.width = gameCanvas.clientWidth;
-    gameCanvas.height = gameCanvas.clientHeight;
-    window.__game = startGame(gameCanvas, sprites);
+    // The canvas can have no size yet right after un-hiding; wait until layout gives it one.
+    const launch = () => {
+      if (!gameCanvas.clientWidth || !gameCanvas.clientHeight) { requestAnimationFrame(launch); return; }
+      gameCanvas.width = gameCanvas.clientWidth;
+      gameCanvas.height = gameCanvas.clientHeight;
+      window.__game = startGame(gameCanvas, sprites);
+    };
+    launch();
   }
 
   const startBtn = document.getElementById("start");
