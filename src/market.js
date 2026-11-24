@@ -401,10 +401,26 @@ export function basketSpot(w, h) {
   return { x: w * 0.13, y: L.floor - h * 0.05, s: Math.min(1.2, w / 1000) * 70 };
 }
 
-export function nearBasket(state) {
-  if (state.mode !== "market" || state.hasBasket) return false;
+const nearBasketSpot = (state) => {
   const b = basketSpot(state.width, state.height);
   return Math.hypot(b.x - state.x, b.y - state.y) < Math.max(110, state.width * 0.1);
+};
+
+export function nearBasket(state) {
+  return state.mode === "market" && !state.hasBasket && nearBasketSpot(state);
+}
+
+// Put the basket back at the entrance; anything not paid for goes back on the shelves.
+export function nearReturn(state) {
+  return state.mode === "market" && state.hasBasket && nearBasketSpot(state);
+}
+
+export function putBackBasket(state) {
+  if (!nearReturn(state)) return false;
+  state.hasBasket = false;
+  state.basket = [];
+  state.ladySay = { text: "Basket put back!", age: 0 };
+  return true;
 }
 
 export function pickUpBasket(state) {

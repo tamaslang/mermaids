@@ -212,3 +212,25 @@ test("things you take poke out of your basket, and spare baskets are piled in th
   expect(await painted(page)).toBeGreaterThan(50);
   expect(errors).toEqual([]);
 });
+
+test("Q puts the basket back at the entrance (unpaid things go back), but only there", async ({ page }) => {
+  await start(page);
+  await enterMarket(page);
+  await park(page, "carrot");
+  await page.keyboard.press("t");
+  await page.keyboard.press("q");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(true);
+
+  await page.evaluate(async () => {
+    const { basketSpot } = await import("/src/market.js");
+    const s = window.__game.state;
+    const b = basketSpot(s.width, s.height);
+    s.x = b.x; s.y = b.y;
+  });
+  await page.keyboard.press("q");
+  expect(await shop(page)).toMatchObject({ basket: [] });
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+
+  await page.keyboard.press("a");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(true);
+});

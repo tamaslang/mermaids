@@ -3,7 +3,7 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
-import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, pickUpBasket, drawBasket, drawBasketPile, basketSpot, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, nearReturn, putBackBasket, pickUpBasket, drawBasket, drawBasketPile, basketSpot, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
 import { moveSelection, useItem, updateMagic, drawMagic, drawMagicHud } from "./magic.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
@@ -279,6 +279,7 @@ export function startGame(canvas, sprites) {
       if (!e.repeat) startFlip(state);
       return;
     }
+    if ((e.key === "q" || e.key === "Q") && !e.repeat) { putBackBasket(state); return; }
     if ((e.key === "a" || e.key === "A") && !e.repeat && state.mode === "market") pickUpBasket(state);
     const k = KEY_MAP[e.key];
     if (k) { keys.add(k); e.preventDefault(); }
@@ -430,6 +431,7 @@ export function startGame(canvas, sprites) {
     drawMarketHud(ctx, state, w, h);
     const it = nearItem(state);
     if (nearBasket(state)) hint("Press A to pick up the basket");
+    else if (nearReturn(state)) hint("Press Q to put the basket back");
     else if (nearTill(state)) hint(state.basket.length ? "Press P to pay" : "Take things with T, then pay here");
     else if (it) hint("Press T to put it in your basket");
     else hint("Enter leaves Mermarket · I opens inventory");
