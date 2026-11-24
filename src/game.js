@@ -280,7 +280,7 @@ export function startGame(canvas, sprites) {
       return;
     }
     if ((e.key === "q" || e.key === "Q") && !e.repeat) { putBackBasket(state); return; }
-    if ((e.key === "a" || e.key === "A") && !e.repeat && state.mode === "market") pickUpBasket(state);
+    if ((e.key === "a" || e.key === "A") && !e.repeat && (state.mode === "market" || state.mode === "bakery")) pickUpBasket(state);
     const k = KEY_MAP[e.key];
     if (k) { keys.add(k); e.preventDefault(); }
   };
@@ -452,7 +452,9 @@ export function startGame(canvas, sprites) {
       drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
     }
     if (state.say) drawSpeech(ctx, state.x, state.y - spriteWidth(h) * 0.3, state.say.text, Math.min(1, (SAY_FOR - state.say.age) / 0.4));
-    if (state.held) hint("Press E to eat your pastry");
+    if (nearBasket(state)) hint("Press A to pick up a basket");
+    else if (nearReturn(state)) hint("Press Q to put the basket back");
+    else if (state.held) hint("Press E to eat your pastry");
     else if (nearPastry(state) >= 0) hint("Press T to take this pastry");
     else hint("Swim to a pastry · Enter leaves the bakery");
   }
@@ -495,7 +497,7 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
     }
     ctx.restore();
-    if (state.hasBasket && state.mode === "market" && state.sitting === null) {
+    if (state.hasBasket && (state.mode === "market" || state.mode === "bakery") && state.sitting === null) {
       drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.18, sw * 0.26, state.basket);
     }
     if (state.held && state.sitting === null) {

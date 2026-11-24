@@ -1,5 +1,7 @@
 // Mermarket: a hill-shaped cave with a stall outside, and a little shop inside run by an octopus.
 
+import { bakeryLayout } from "./bakery.js";
+
 const INK = "#4a4a4a";
 const FONT = '"Comic Sans MS", "Comic Neue", cursive';
 
@@ -396,23 +398,25 @@ export function nearTill(state) {
 }
 
 // The shopping basket waits on the floor by the entrance until you pick it up.
-export function basketSpot(w, h) {
-  const L = marketLayout(w, h);
-  return { x: w * 0.13, y: L.floor - h * 0.05, s: Math.min(1.2, w / 1000) * 70 };
+export function basketSpot(w, h, mode = "market") {
+  const k = Math.min(1.2, w / 1000);
+  if (mode === "bakery") return { x: w * 0.06, y: bakeryLayout(w, h).floor - 4 - k * 25, s: k * 50 };
+  return { x: w * 0.13, y: marketLayout(w, h).floor - h * 0.05, s: k * 70 };
 }
 
 const nearBasketSpot = (state) => {
-  const b = basketSpot(state.width, state.height);
+  const b = basketSpot(state.width, state.height, state.mode);
   return Math.hypot(b.x - state.x, b.y - state.y) < Math.max(110, state.width * 0.1);
 };
+const inShop = (state) => state.mode === "market" || state.mode === "bakery";
 
 export function nearBasket(state) {
-  return state.mode === "market" && !state.hasBasket && nearBasketSpot(state);
+  return inShop(state) && !state.hasBasket && nearBasketSpot(state);
 }
 
 // Put the basket back at the entrance; anything not paid for goes back on the shelves.
 export function nearReturn(state) {
-  return state.mode === "market" && state.hasBasket && nearBasketSpot(state);
+  return inShop(state) && state.hasBasket && nearBasketSpot(state);
 }
 
 export function putBackBasket(state) {
