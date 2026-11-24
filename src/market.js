@@ -414,12 +414,15 @@ export function pickUpBasket(state) {
   return true;
 }
 
-export function drawBasket(ctx, x, y, s) {
+export function drawBasket(ctx, x, y, s, items = []) {
   ctx.save();
   ctx.lineJoin = ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.arc(x, y - s * 0.55, s * 0.5, Math.PI, 0);
-  outline(ctx, null, 2.4);
+  // Whatever was taken pokes out of the top.
+  const shown = items.slice(-4);
+  shown.forEach((id, i) => {
+    const dx = (i - (shown.length - 1) / 2) * s * 0.36;
+    drawItemIcon(ctx, id, x + dx, y - s * 0.8 - (i % 2) * s * 0.12, s * 0.8);
+  });
   ctx.beginPath();
   ctx.moveTo(x - s * 0.55, y - s * 0.5);
   ctx.lineTo(x + s * 0.55, y - s * 0.5);
@@ -431,7 +434,17 @@ export function drawBasket(ctx, x, y, s) {
   for (const f of [0.25, 0.5, 0.75]) { ctx.moveTo(x - s * 0.5 + s * f * 0.2, y - s * 0.5 + s * 0.5 * f); ctx.lineTo(x + s * 0.5 - s * f * 0.2, y - s * 0.5 + s * 0.5 * f); }
   for (const f of [-0.25, 0, 0.25]) { ctx.moveTo(x + s * f * 1.1, y - s * 0.5); ctx.lineTo(x + s * f * 0.8, y); }
   outline(ctx, null, 1.4);
+  ctx.beginPath();
+  ctx.arc(x, y - s * 0.5, s * 0.5, Math.PI, 0);
+  outline(ctx, null, 2.4);
   ctx.restore();
+}
+
+// A stack of spare baskets standing on the floor.
+export function drawBasketPile(ctx, x, y, s) {
+  drawBasket(ctx, x - s * 0.55, y, s);
+  drawBasket(ctx, x + s * 0.55, y, s);
+  drawBasket(ctx, x, y - s * 0.4, s);
 }
 
 export function takeItem(state) {

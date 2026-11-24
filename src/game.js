@@ -3,7 +3,7 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
-import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, pickUpBasket, drawBasket, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, pickUpBasket, drawBasket, drawBasketPile, basketSpot, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
 import { moveSelection, useItem, updateMagic, drawMagic, drawMagicHud } from "./magic.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
@@ -420,6 +420,8 @@ export function startGame(canvas, sprites) {
     updateCritters(critters, dt, 0, w, h);
     drawBubbles(dt);
     drawMarket(ctx, state, w, h, performance.now());
+    const bs = basketSpot(w, h);
+    drawBasketPile(ctx, bs.x - bs.s * 0.85, bs.y + 4, bs.s * 0.8);
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.ladySay) {
       const p = sellerSpot(w, h);
@@ -440,6 +442,8 @@ export function startGame(canvas, sprites) {
     updateCritters(critters, dt, 0, w, h);
     drawBubbles(dt);
     drawBakery(ctx, state, w, h, performance.now());
+    const ps = Math.min(1.2, w / 1000) * 50;
+    drawBasketPile(ctx, w * 0.06, L.floor - 4, ps);
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.ladySay) {
       const p = ladySpot(w, h);
@@ -490,7 +494,7 @@ export function startGame(canvas, sprites) {
     }
     ctx.restore();
     if (state.hasBasket && state.mode === "market" && state.sitting === null) {
-      drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.16, sw * 0.2);
+      drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.18, sw * 0.26, state.basket);
     }
     if (state.held && state.sitting === null) {
       drawPastry(ctx, state.held, state.x + state.facing * sw * 0.36, state.y + sw * 0.05, sw * 0.2);

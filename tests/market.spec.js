@@ -181,3 +181,34 @@ test("A far from the basket does not pick it up", async ({ page }) => {
   await page.keyboard.press("a");
   expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
 });
+
+test("things you take poke out of your basket, and spare baskets are piled in the shop and the bakery", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await start(page);
+  await enterMarket(page);
+  const inkNearBasket = () => page.evaluate(() => {
+    const g = window.__game, s = g.state, c = document.getElementById("game-canvas");
+    const sw = Math.min(280, Math.max(120, s.height * 0.3)), bs = sw * 0.26;
+    const x = s.x + s.facing * sw * 0.34;
+    const y = s.y + sw * 0.18;
+    const d = c.getContext("2d").getImageData(Math.round(x - bs), Math.round(y - bs * 1.3), Math.round(bs * 2), Math.round(bs * 0.8)).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] < 120 && d[i + 2] < 120) n++;
+    return n;
+  });
+  await page.waitForTimeout(150);
+  const before = await inkNearBasket();
+  await park(page, "strawberry");
+  await page.keyboard.press("t");
+  await page.waitForTimeout(150);
+  expect(await inkNearBasket()).toBeGreaterThan(before);
+
+  await page.keyboard.press("Enter");
+  await page.evaluate(() => { const s = window.__game.state; s.scroll = 3800 - s.x; });
+  await page.keyboard.press("Enter");
+  expect(await mode(page)).toBe("bakery");
+  await page.waitForTimeout(200);
+  expect(await painted(page)).toBeGreaterThan(50);
+  expect(errors).toEqual([]);
+});
