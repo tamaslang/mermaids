@@ -82,3 +82,37 @@ test("a pastry can be carried out of the bakery and eaten in the sea", async ({ 
   await page.keyboard.press("e");
   expect(await info(page)).toMatchObject({ held: null, eaten: 1 });
 });
+
+test("pick up a basket from the pile in the bakery with A, and put it back with Q", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start Game" }).click();
+  await page.evaluate(() => { const s = window.__game.state; s.scroll = 3800 - s.x; });
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => window.__game.state.mode)).toBe("bakery");
+
+  await page.evaluate(() => { const s = window.__game.state; s.x = s.width * 0.7; s.y = s.height * 0.4; });
+  await page.keyboard.press("a");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+
+  await page.evaluate(async () => {
+    const { basketSpot } = await import("/src/market.js");
+    const s = window.__game.state;
+    const b = basketSpot(s.width, s.height, "bakery");
+    s.x = b.x; s.y = b.y;
+  });
+  await page.keyboard.press("a");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(true);
+  await page.waitForTimeout(200);
+
+  await page.evaluate(async () => {
+    const { basketSpot } = await import("/src/market.js");
+    const s = window.__game.state;
+    const b = basketSpot(s.width, s.height, "bakery");
+    s.x = b.x; s.y = b.y;
+  });
+  await page.keyboard.press("q");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+  expect(errors).toEqual([]);
+});

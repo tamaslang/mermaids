@@ -3,6 +3,8 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, nearReturn, putBackBasket, pickUpBasket, drawBasket, drawBasketPile, basketSpot, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
+import { moveSelection, useItem, updateMagic, drawMagic, drawMagicHud } from "./magic.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
 export const SPEED = 260;
@@ -26,7 +28,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, hasBasket: false, homeBasket: null, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
 }
 
 export function nearDoor(state) {
@@ -37,7 +39,30 @@ export function nearDoor(state) {
 export function homeLayout(w, h) {
   const sofaW = Math.min(260, w * 0.24);
   const floor = h * 0.86;
-  return { floor, sofaW, sofaH: sofaW * 0.6, sofas: [{ x: w * 0.3 }, { x: w * 0.7 }] };
+  return { floor, sofaW, sofaH: sofaW * 0.6, sofas: [{ x: w * 0.3 }, { x: w * 0.7 }], table: { x: w * 0.5, tw: Math.min(150, w * 0.16), top: floor - h * 0.17 } };
+}
+
+export function nearTable(state) {
+  if (state.mode !== "home") return false;
+  const { table } = homeLayout(state.width, state.height);
+  return Math.abs(table.x - state.x) < table.tw * 0.9 && state.y > state.height * 0.45 && state.sitting === null;
+}
+
+// Basket taken home: G sets it down on the table (with whatever is in it), A takes it again.
+export function putBasketOnTable(state) {
+  if (!nearTable(state) || !state.hasBasket) return false;
+  state.homeBasket = [...state.basket];
+  state.basket = [];
+  state.hasBasket = false;
+  return true;
+}
+
+export function takeBasketFromTable(state) {
+  if (!nearTable(state) || state.hasBasket || !state.homeBasket) return false;
+  state.basket = state.homeBasket;
+  state.homeBasket = null;
+  state.hasBasket = true;
+  return true;
 }
 
 export function nearSofa(state) {
@@ -48,6 +73,10 @@ export function nearSofa(state) {
 
 export function nearRace(state) {
   return state.mode === "sea" && Math.abs(RACE_X - state.scroll - state.x) < raceCaveWidth(state.height) * 0.3;
+}
+
+export function nearMarket(state) {
+  return state.mode === "sea" && Math.abs(MARKET_X - state.scroll - state.x) < marketWidth(state.height) * 0.3;
 }
 
 export function nearBakery(state) {
@@ -73,6 +102,7 @@ export function eatPastry(state) {
 }
 
 function leaveTo(state, worldX) {
+  state.basket = []; // unpaid things go back on the shelves
   state.mode = "sea";
   state.sitting = null;
   state.race = null;
@@ -84,6 +114,16 @@ function leaveTo(state, worldX) {
 export function toggleDoor(state) {
   if (state.mode === "race") { leaveTo(state, RACE_X); return; }
   if (state.mode === "bakery") { leaveTo(state, BAKERY_X); return; }
+  if (state.mode === "market") { leaveTo(state, MARKET_X); return; }
+  if (nearMarket(state)) {
+    state.mode = "market";
+    state.x = margins(state.height).mx + 20;
+    state.y = marketLayout(state.width, state.height).floor - state.height * 0.12;
+    state.vx = state.vy = 0;
+    state.facing = 1;
+    state.ladySay = { text: "Welcome to Mermarket!", age: 0 };
+    return;
+  }
   if (nearBakery(state)) {
     state.mode = "bakery";
     state.x = margins(state.height).mx + 20;
@@ -178,8 +218,8 @@ export function step(state, keys, dt) {
   }
   const len = Math.hypot(dx, dy) || 1;
   const ease = Math.min(1, ACCEL * dt);
-  state.vx += ((dx / len) * SPEED - state.vx) * ease;
-  state.vy += ((dy / len) * SPEED - state.vy) * ease;
+  state.vx += ((dx / len) * SPEED * (state.speedMul || 1) - state.vx) * ease;
+  state.vy += ((dy / len) * SPEED * (state.speedMul || 1) - state.vy) * ease;
   if (!dx && Math.abs(state.vx) < 1) state.vx = 0;
   if (!dy && Math.abs(state.vy) < 1) state.vy = 0;
 
@@ -202,8 +242,9 @@ export function step(state, keys, dt) {
 
 // Keep the mermaid at the same relative spot when the screen size changes.
 export function resizeState(state, width, height) {
-  state.x = (state.x / state.width) * width;
-  state.y = (state.y / state.height) * height;
+  const ok = state.width > 0 && state.height > 0 && Number.isFinite(state.x) && Number.isFinite(state.y);
+  state.x = ok ? (state.x / state.width) * width : width * 0.25;
+  state.y = ok ? (state.y / state.height) * height : height / 2;
   state.width = width;
   state.height = height;
   const { mx, my } = margins(height);
@@ -239,8 +280,16 @@ export function startGame(canvas, sprites) {
   let running = true;
 
   const onDown = (e) => {
+    if (state.inventoryOpen) {
+      const up = e.key === "ArrowUp" || e.key === "w" || e.key === "W";
+      const down = e.key === "ArrowDown" || e.key === "s" || e.key === "S";
+      if (up || down) { e.preventDefault(); moveSelection(state, up ? -1 : 1); state.invMsg = null; return; }
+      if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) useItem(state, critters); return; }
+    }
     if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) toggleDoor(state); return; }
-    if ((e.key === "t" || e.key === "T") && !e.repeat) { takePastry(state); return; }
+    if ((e.key === "i" || e.key === "I") && !e.repeat) { state.inventoryOpen = !state.inventoryOpen; return; }
+    if ((e.key === "p" || e.key === "P") && !e.repeat) { payBasket(state); return; }
+    if ((e.key === "t" || e.key === "T") && !e.repeat) { if (state.mode === "market") takeItem(state); else takePastry(state); return; }
     if ((e.key === "e" || e.key === "E") && !e.repeat) { if (!eatPastry(state)) toggleSit(state); return; }
     if ((e.key === "h" || e.key === "H") && !e.repeat) {
       const c = state.mode === "sea" ? nearestCritter(critters, state.x, state.y, canvas.width) : null;
@@ -252,6 +301,10 @@ export function startGame(canvas, sprites) {
       if (!e.repeat) startFlip(state);
       return;
     }
+    if ((e.key === "q" || e.key === "Q") && !e.repeat) { putBackBasket(state); return; }
+    if ((e.key === "g" || e.key === "G") && !e.repeat) { putBasketOnTable(state); return; }
+    if ((e.key === "a" || e.key === "A") && !e.repeat) takeBasketFromTable(state);
+    if ((e.key === "a" || e.key === "A") && !e.repeat && (state.mode === "market" || state.mode === "bakery")) pickUpBasket(state);
     const k = KEY_MAP[e.key];
     if (k) { keys.add(k); e.preventDefault(); }
   };
@@ -324,11 +377,13 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.reef, HOME_X - state.scroll - rw / 2, h - rh - 6, rw, rh);
       drawRaceCave(ctx, RACE_X - state.scroll, h);
       drawBakeryEntrance(ctx, BAKERY_X - state.scroll, h);
+      drawMarketEntrance(ctx, MARKET_X - state.scroll, h);
     }
 
     drawWeeds(ctx, w, h);
 
     drawMermaid(Math.sin(state.scroll / 40) * 3);
+    drawMagic(ctx, state, w, h);
     drawCritterSpeech(ctx, critters);
     if (state.say) {
       const fade = Math.min(1, (SAY_FOR - state.say.age) / 0.4);
@@ -339,6 +394,7 @@ export function startGame(canvas, sprites) {
       hint(state.race.done ? `Finished in ${state.race.time.toFixed(1)}s! Press Enter to return to the sea` : "Swim through every hoop · Enter quits the race");
     } else if (nearRace(state)) hint("Press Enter to start the race");
     else if (nearBakery(state)) hint("Press Enter to visit the bakery");
+    else if (nearMarket(state)) hint("Press Enter to visit Mermarket");
     else if (nearDoor(state)) hint("Press Enter to go home");
   }
 
@@ -376,10 +432,39 @@ export function startGame(canvas, sprites) {
     drawFurniture(ctx, w, h, floor, sprites, performance.now(), drawOutside);
     drawBubbles(dt);
     sofas.forEach((f) => ctx.drawImage(sprites.sofa, f.x - sofaW / 2, floor - sofaH, sofaW, sofaH));
+    if (state.homeBasket) {
+      const { table } = homeLayout(w, h);
+      drawBasket(ctx, table.x + table.tw * 0.02, table.top, table.tw * 0.28, state.homeBasket);
+    }
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.sitting !== null) hint("Enter leaves home, any arrow stands up");
+    else if (nearTable(state) && state.hasBasket) hint("Press G to put the basket down");
+    else if (nearTable(state) && state.homeBasket) hint("Press A to pick the basket up");
     else if (nearSofa(state) >= 0) hint("Press E to sit");
     else hint("Press Enter to leave home");
+  }
+
+  function drawMarketMode(dt) {
+    const { width: w, height: h } = canvas;
+    const L = marketLayout(w, h);
+    drawCave(ctx, w, h, L.floor);
+    updateCritters(critters, dt, 0, w, h);
+    drawBubbles(dt);
+    drawMarket(ctx, state, w, h, performance.now());
+    const bs = basketSpot(w, h);
+    drawBasketPile(ctx, bs.x - bs.s * 0.85, bs.y + 4, bs.s * 0.8);
+    drawMermaid(Math.sin(performance.now() / 500) * 3);
+    if (state.ladySay) {
+      const p = sellerSpot(w, h);
+      drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
+    }
+    drawMarketHud(ctx, state, w, h);
+    const it = nearItem(state);
+    if (nearBasket(state)) hint("Press A to pick up the basket");
+    else if (nearReturn(state)) hint("Press Q to put the basket back");
+    else if (nearTill(state)) hint(state.basket.length ? "Press P to pay" : "Take things with T, then pay here");
+    else if (it) hint("Press T to put it in your basket");
+    else hint("Enter leaves Mermarket · I opens inventory");
   }
 
   function drawBakeryMode(dt) {
@@ -389,13 +474,17 @@ export function startGame(canvas, sprites) {
     updateCritters(critters, dt, 0, w, h);
     drawBubbles(dt);
     drawBakery(ctx, state, w, h, performance.now());
+    const ps = Math.min(1.2, w / 1000) * 50;
+    drawBasketPile(ctx, w * 0.06, L.floor - 4, ps);
     drawMermaid(Math.sin(performance.now() / 500) * 3);
     if (state.ladySay) {
       const p = ladySpot(w, h);
       drawSpeech(ctx, p.x, p.y, state.ladySay.text, Math.min(1, (SAY_FOR - state.ladySay.age) / 0.4));
     }
     if (state.say) drawSpeech(ctx, state.x, state.y - spriteWidth(h) * 0.3, state.say.text, Math.min(1, (SAY_FOR - state.say.age) / 0.4));
-    if (state.held) hint("Press E to eat your pastry");
+    if (nearBasket(state)) hint("Press A to pick up a basket");
+    else if (nearReturn(state)) hint("Press Q to put the basket back");
+    else if (state.held) hint("Press E to eat your pastry");
     else if (nearPastry(state) >= 0) hint("Press T to take this pastry");
     else hint("Swim to a pastry · Enter leaves the bakery");
   }
@@ -438,6 +527,9 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
     }
     ctx.restore();
+    if (state.hasBasket && state.sitting === null) {
+      drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.18, sw * 0.26, state.basket);
+    }
     if (state.held && state.sitting === null) {
       drawPastry(ctx, state.held, state.x + state.facing * sw * 0.36, state.y + sw * 0.05, sw * 0.2);
     }
@@ -446,13 +538,18 @@ export function startGame(canvas, sprites) {
   function draw(dt) {
     if (state.mode === "home") drawHome(dt);
     else if (state.mode === "bakery") drawBakeryMode(dt);
+    else if (state.mode === "market") drawMarketMode(dt);
     else drawSea(dt);
+    drawMagicHud(ctx, state, canvas.width, canvas.height);
+    if (state.inventoryOpen) drawInventory(ctx, state, canvas.width, canvas.height);
   }
 
   function frame(now) {
     if (!running) return;
     const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+    onResize();
     step(state, keys, dt);
+    updateMagic(state, critters, dt, canvas.width, canvas.height);
     last = now;
     draw(dt);
     requestAnimationFrame(frame);
