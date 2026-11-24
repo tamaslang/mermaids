@@ -3,7 +3,7 @@ import { drawSpeech } from "./speech.js";
 import { drawFurniture } from "./home.js";
 import { RACE_X, raceCaveWidth, createRace, updateRace, drawRace, drawRaceCave } from "./race.js";
 import { BAKERY_X, bakeryWidth, PASTRIES, nearPastry, bakeryLayout, drawBakery, drawBakeryEntrance, drawPastry, ladySpot } from "./bakery.js";
-import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
+import { MARKET_X, marketWidth, marketLayout, drawMarket, drawMarketEntrance, sellerSpot, nearItem, nearTill, nearBasket, pickUpBasket, drawBasket, takeItem, payBasket, drawMarketHud, drawInventory } from "./market.js";
 import { moveSelection, useItem, updateMagic, drawMagic, drawMagicHud } from "./magic.js";
 import { makeWaterTile, drawTile, drawCave } from "./paper.js";
 
@@ -28,7 +28,7 @@ export const HOME_X = 1400;
 export const reefWidth = (h) => Math.min(520, Math.max(300, h * 0.8));
 
 export function createState(width, height) {
-  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
+  return { width, height, x: width * 0.25, y: height / 2, vx: 0, vy: 0, facing: 1, turn: 1, flip: 0, scroll: 0, mode: "sea", sitting: null, puffs: [], puffTimer: 0, say: null, held: null, eaten: 0, ladySay: null, basket: [], inventory: {}, inventoryOpen: false, hasBasket: false, invSel: 0, invMsg: null, magic: null, speedMul: 1 };
 }
 
 export function nearDoor(state) {
@@ -79,6 +79,7 @@ export function eatPastry(state) {
 }
 
 function leaveTo(state, worldX) {
+  state.hasBasket = false;
   state.basket = []; // unpaid things go back on the shelves
   state.mode = "sea";
   state.sitting = null;
@@ -278,6 +279,7 @@ export function startGame(canvas, sprites) {
       if (!e.repeat) startFlip(state);
       return;
     }
+    if ((e.key === "a" || e.key === "A") && !e.repeat && state.mode === "market") pickUpBasket(state);
     const k = KEY_MAP[e.key];
     if (k) { keys.add(k); e.preventDefault(); }
   };
@@ -425,7 +427,8 @@ export function startGame(canvas, sprites) {
     }
     drawMarketHud(ctx, state, w, h);
     const it = nearItem(state);
-    if (nearTill(state)) hint(state.basket.length ? "Press P to pay" : "Take things with T, then pay here");
+    if (nearBasket(state)) hint("Press A to pick up the basket");
+    else if (nearTill(state)) hint(state.basket.length ? "Press P to pay" : "Take things with T, then pay here");
     else if (it) hint("Press T to put it in your basket");
     else hint("Enter leaves Mermarket · I opens inventory");
   }
@@ -486,6 +489,9 @@ export function startGame(canvas, sprites) {
       ctx.drawImage(sprites.mermaid, -sw / 2, -sh / 2, sw, sh);
     }
     ctx.restore();
+    if (state.hasBasket && state.mode === "market" && state.sitting === null) {
+      drawBasket(ctx, state.x + state.facing * sw * 0.34, state.y + sw * 0.16, sw * 0.2);
+    }
     if (state.held && state.sitting === null) {
       drawPastry(ctx, state.held, state.x + state.facing * sw * 0.36, state.y + sw * 0.05, sw * 0.2);
     }

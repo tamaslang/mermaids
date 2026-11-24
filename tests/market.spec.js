@@ -44,9 +44,10 @@ test("visit Mermarket, see the shop painted, and leave back to the sea", async (
   expect(errors).toEqual([]);
 });
 
-const enterMarket = async (page) => {
+const enterMarket = async (page, withBasket = true) => {
   await page.evaluate(() => { const s = window.__game.state; s.scroll = 5000 - s.x; });
   await page.keyboard.press("Enter");
+  if (withBasket) await page.evaluate(() => { window.__game.state.hasBasket = true; });
 };
 
 const park = (page, id) => page.evaluate(async (id) => {
@@ -141,4 +142,42 @@ test("the basket HUD draws the items you took, not just a count", async ({ page 
   await page.waitForTimeout(150);
   expect(await hudInk()).toBeGreaterThan(before);
   expect(errors).toEqual([]);
+});
+
+test("a basket waits at the entrance: A picks it up, and without it T takes nothing", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await start(page);
+  await enterMarket(page, false);
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+
+  await park(page, "strawberry");
+  await page.keyboard.press("t");
+  expect((await shop(page)).basket).toEqual([]);
+
+  await page.evaluate(async () => {
+    const { basketSpot } = await import("/src/market.js");
+    const s = window.__game.state;
+    const b = basketSpot(s.width, s.height);
+    s.x = b.x; s.y = b.y;
+  });
+  await page.keyboard.press("a");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(true);
+  await page.waitForTimeout(150);
+
+  await park(page, "strawberry");
+  await page.keyboard.press("t");
+  expect((await shop(page)).basket).toEqual(["strawberry"]);
+
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test("A far from the basket does not pick it up", async ({ page }) => {
+  await start(page);
+  await enterMarket(page, false);
+  await page.evaluate(() => { const s = window.__game.state; s.x = s.width * 0.7; s.y = s.height * 0.5; });
+  await page.keyboard.press("a");
+  expect(await page.evaluate(() => window.__game.state.hasBasket)).toBe(false);
 });

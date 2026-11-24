@@ -395,7 +395,50 @@ export function nearTill(state) {
   return state.x > counter.x0 - 60 && state.y > counter.top - state.height * 0.3;
 }
 
+// The shopping basket waits on the floor by the entrance until you pick it up.
+export function basketSpot(w, h) {
+  const L = marketLayout(w, h);
+  return { x: w * 0.13, y: L.floor - h * 0.05, s: Math.min(1.2, w / 1000) * 70 };
+}
+
+export function nearBasket(state) {
+  if (state.mode !== "market" || state.hasBasket) return false;
+  const b = basketSpot(state.width, state.height);
+  return Math.hypot(b.x - state.x, b.y - state.y) < Math.max(110, state.width * 0.1);
+}
+
+export function pickUpBasket(state) {
+  if (!nearBasket(state)) return false;
+  state.hasBasket = true;
+  state.ladySay = { text: "Happy shopping!", age: 0 };
+  return true;
+}
+
+export function drawBasket(ctx, x, y, s) {
+  ctx.save();
+  ctx.lineJoin = ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(x, y - s * 0.55, s * 0.5, Math.PI, 0);
+  outline(ctx, null, 2.4);
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.55, y - s * 0.5);
+  ctx.lineTo(x + s * 0.55, y - s * 0.5);
+  ctx.lineTo(x + s * 0.4, y);
+  ctx.lineTo(x - s * 0.4, y);
+  ctx.closePath();
+  outline(ctx, "#e8c89a", 2.4);
+  ctx.beginPath();
+  for (const f of [0.25, 0.5, 0.75]) { ctx.moveTo(x - s * 0.5 + s * f * 0.2, y - s * 0.5 + s * 0.5 * f); ctx.lineTo(x + s * 0.5 - s * f * 0.2, y - s * 0.5 + s * 0.5 * f); }
+  for (const f of [-0.25, 0, 0.25]) { ctx.moveTo(x + s * f * 1.1, y - s * 0.5); ctx.lineTo(x + s * f * 0.8, y); }
+  outline(ctx, null, 1.4);
+  ctx.restore();
+}
+
 export function takeItem(state) {
+  if (!state.hasBasket) {
+    state.ladySay = { text: "Pick up a basket first (A)!", age: 0 };
+    return false;
+  }
   const it = nearItem(state);
   if (!it) return false;
   state.basket.push(it.id);
@@ -441,6 +484,21 @@ export function drawItemIcon(ctx, id, x, y, s) {
 }
 
 export function drawMarketHud(ctx, state, w, h) {
+  if (!state.hasBasket) {
+    const b = basketSpot(w, h);
+    drawBasket(ctx, b.x, b.y, b.s);
+    if (nearBasket(state)) {
+      ctx.save();
+      ctx.strokeStyle = "#e8403a";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y - b.s * 0.3, b.s * 0.85, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return;
+  }
   const it = nearItem(state);
   if (it) {
     ctx.save();
